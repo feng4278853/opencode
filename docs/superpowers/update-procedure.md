@@ -254,3 +254,103 @@ docs/superpowers/update-procedure.md          # 本文档
 | RTK | `D:\rtk` | Git 输出压缩（可选） |
 
 mycode wrapper (`mycode.bat`) 已硬编码 Bun 路径。如果 Bun 迁移到其他位置，需要同步更新 `mycode.bat`。
+
+---
+
+## 插件升级
+
+mycode 使用的两个插件（superpowers、oh-my-openagent）独立于 opencode 上游升级，有各自的升级方式。
+
+### 方式一：oh-my-openagent 自动升级（默认）
+
+oh-my-openagent 自带 `auto-update-checker`，默认 `auto_update: true`。每次启动 mycode 时会自动检查 npm registry 并升级缓存。**正常使用不需要手动操作。**
+
+配置文件位置：`~/.config/mycode/oh-my-openagent.json`
+
+```jsonc
+{
+  // 设置为 false 可禁用自动升级（仅通知）
+  "auto_update": true,
+  // 其他配置...
+}
+```
+
+### 方式二：superpowers 手动升级
+
+superpowers 是 git 仓库（`obra/superpowers`），mycode 启动时发现缓存目录已存在就跳过下载。**必须手动删除缓存**才能重新拉取最新版。
+
+```bat
+rd /s /q "%USERPROFILE%\.cache\mycode\packages\superpowers@git+https_"
+mycode run "hi"
+```
+
+### 方式三：一键强制升级两个插件
+
+如果想立即升级两个插件到最新版（不等自动检查）：
+
+```bat
+rd /s /q "%USERPROFILE%\.cache\mycode\packages\oh-my-openagent@latest"
+rd /s /q "%USERPROFILE%\.cache\mycode\packages\superpowers@git+https_"
+mycode run "hi"
+```
+
+删除缓存后 mycode 启动时会重新从 npm / GitHub 下载最新版本。
+
+### 验证插件版本
+
+```powershell
+# oh-my-openagent 版本
+Get-Content "$env:USERPROFILE\.cache\mycode\packages\oh-my-openagent@latest\node_modules\oh-my-openagent\package.json" | ConvertFrom-Json | Select name, version
+
+# superpowers 版本
+Get-Content "$env:USERPROFILE\.cache\mycode\packages\superpowers@git+https_\github.com\obra\superpowers.git\node_modules\superpowers\package.json" | ConvertFrom-Json | Select name, version
+```
+
+### 插件配置文件
+
+| 文件 | 位置 | 作用 |
+|---|---|---|
+| mycode.jsonc | `~/.config/mycode/mycode.jsonc` | 主配置（provider、mcp、plugin 列表） |
+| oh-my-openagent.json | `~/.config/mycode/oh-my-openagent.json` | oh-my-openagent 配置（agents、categories、auto_update） |
+| auth.json | `~/.local/share/mycode/auth.json` | API 凭证 |
+| tui.json | `~/.config/mycode/tui.json` | TUI 配置 |
+
+---
+
+## Bun 版本同步
+
+如果 Bun runtime 升级了（`D:\npm-tools\bun` 更新），需要同步项目内的 `bun.exe` 副本：
+
+```powershell
+# 检查当前 Bun 版本
+& "D:\npm-tools\bun\node_modules\bun\bin\bun.exe" --version
+
+# 如果 Bun 版本和项目内的不一致，重新复制
+Copy-Item "D:\npm-tools\bun\node_modules\bun\bin\bun.exe" "F:\Git\my-open-code\opencode\bun.exe" -Force
+
+# 验证 hash 一致
+$src = (Get-FileHash "D:\npm-tools\bun\node_modules\bun\bin\bun.exe" -Algorithm SHA256).Hash
+$dst = (Get-FileHash "F:\Git\my-open-code\opencode\bun.exe" -Algorithm SHA256).Hash
+Write-Output "源: $src"
+Write-Output "目标: $dst"
+Write-Output "一致: $($src -eq $dst)"
+```
+
+> **注意**：EDR 基于**进程名 `bun.exe`** 判断是否为已知安全应用。如果 Bun 版本升级但进程名仍为 `bun.exe`，EDR 仍然容忍。如果 Bun 改名为其他名字（如 `bun-runtime.exe`），需要重新评估 EDR 兼容性。
+
+### 完整升级检查清单
+
+升级 opencode 上游时，按以下顺序检查：
+
+```
+□ 1. 备份：git tag backup-<日期>
+□ 2. 拉取：git fetch upstream
+□ 3. Rebase：git rebase upstream/dev
+□ 4. 解决冲突（如果有）
+□ 5. 安装依赖：bun install --ignore-scripts
+□ 6. 检查 Bun 版本是否需要同步（见上节）
+□ 7. Typecheck：cd packages\opencode && bun typecheck
+□ 8. 运行测试：mycode run "hi"
+□ 9. 强制推送：git push --force-with-lease origin my-opencode-dec
+□ 10. 更新本文档基点
+```

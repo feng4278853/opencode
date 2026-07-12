@@ -3,25 +3,13 @@ import type { TuiPlugin, TuiPluginApi } from "@opencode-ai/plugin/tui"
 import type { BuiltinTuiPlugin } from "../builtins"
 import { createMemo, Show, For } from "solid-js"
 
-// Sparkline: 8 vertical bars (low to high). ASCII-only to avoid UTF-8
-// encoding corruption seen with Unicode block characters.
-const SPARK = ".:-+*#%@$" as const
-const SPARK_STEPS = SPARK.length
-
-// 5-tier color buckets matching the bar index.
-function sparkColor(api: TuiPluginApi, idx: number) {
+// 4-tier color buckets for trend bars.
+function sparkColor(api: TuiPluginApi, rate: number) {
   const theme = api.theme.current
-  if (idx >= 6) return theme.success ?? theme.text ?? undefined
-  if (idx >= 4) return theme.text ?? undefined
-  if (idx >= 2) return theme.warning ?? theme.text ?? undefined
+  if (rate >= 75) return theme.success ?? theme.text ?? undefined
+  if (rate >= 50) return theme.text ?? undefined
+  if (rate >= 25) return theme.warning ?? theme.text ?? undefined
   return theme.error ?? theme.warning ?? theme.textMuted ?? undefined
-}
-
-function sparkline(api: TuiPluginApi, rates: number[]) {
-  return rates.map((r) => {
-    const idx = Math.min(SPARK_STEPS - 1, Math.max(0, Math.round((r / 100) * (SPARK_STEPS - 1))))
-    return { ch: SPARK[idx], color: sparkColor(api, idx) }
-  })
 }
 
 function hitColor(api: TuiPluginApi, rate: number | null) {
@@ -128,8 +116,8 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
       <Show when={stats().history.length > 0}>
         <box flexDirection="row" gap={0}>
           <text fg={theme().textMuted}>trend: </text>
-          <For each={sparkline(props.api, stats().history.slice(-20))}>
-            {(seg) => <text fg={seg.color}>{seg.ch}</text>}
+          <For each={stats().history.slice(-20)}>
+            {(rate) => <text fg={sparkColor(props.api, rate)}>█</text>}
           </For>
         </box>
         <text fg={theme().textMuted}>

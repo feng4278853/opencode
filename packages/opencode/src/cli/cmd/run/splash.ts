@@ -1,13 +1,12 @@
 // Entry and exit splash banners for direct interactive mode scrollback.
 //
-// Renders the full opencode entry logo and a compact [O] exit badge, plus
-// session metadata and the resume command. These are scrollback snapshots, so
+// Renders a compact "mycode" wordmark with optional detail line on entry,
+// and a session/resume summary on exit. These are scrollback snapshots, so
 // they become immutable terminal history once committed.
 //
-// Both variants use a cell-based renderer. cells() classifies each character
-// in the source template as text, full-block, half-block-mix, or
-// half-block-top, and draw() renders it with foreground/background shadow
-// colors from the theme.
+// cells() classifies each character in the source template as text, full-block,
+// half-block-mix, or half-block-top, and draw() renders it with foreground/background
+// shadow colors from the theme.
 import {
   BoxRenderable,
   type ColorInput,
@@ -18,7 +17,6 @@ import {
   type ScrollbackWriter,
 } from "@opentui/core"
 import * as Locale from "@/util/locale"
-import { go } from "@/cli/logo"
 import type { RunSplashTheme } from "./theme"
 
 export const SPLASH_TITLE_LIMIT = 50
@@ -181,20 +179,10 @@ function build(input: SplashWriterInput, kind: "entry" | "exit", ctx: Scrollback
   let height = 1
 
   if (kind === "entry") {
-    const mark = go.right.slice(1)
     const top = 1
-    const body_left = (mark[0]?.length ?? 0) + 2
+    const body_left = 1
 
-    for (let i = 0; i < mark.length; i += 1) {
-      draw(lines, mark[i] ?? "", {
-        left: 0,
-        top: top + i,
-        fg: left,
-        shadow: leftShadow,
-      })
-    }
-
-    push(lines, body_left, top, "OpenCode", right, undefined, TextAttributes.BOLD)
+    push(lines, body_left, top, "mycode", right, undefined, TextAttributes.BOLD)
     if (input.detail) {
       push(
         lines,
@@ -205,24 +193,14 @@ function build(input: SplashWriterInput, kind: "entry" | "exit", ctx: Scrollback
         undefined,
       )
     }
-    height = top + mark.length
+    height = top + 2
   }
 
   if (kind === "exit") {
-    const mark = go.right.slice(1)
     const top = 1
-    const body_left = (mark[0]?.length ?? 0) + 2
+    const body_left = 1
     const session = "Session  "
     const label = "Continue "
-
-    for (let i = 0; i < mark.length; i += 1) {
-      draw(lines, mark[i] ?? "", {
-        left: 0,
-        top: top + i,
-        fg: left,
-        shadow: leftShadow,
-      })
-    }
 
     if (input.showSession !== false) {
       push(lines, body_left, top, session, left, undefined, TextAttributes.DIM)
@@ -239,7 +217,7 @@ function build(input: SplashWriterInput, kind: "entry" | "exit", ctx: Scrollback
       undefined,
       TextAttributes.BOLD,
     )
-    height = top + mark.length
+    height = top + 2
   }
 
   const root = new BoxRenderable(ctx.renderContext, {

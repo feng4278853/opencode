@@ -13,3 +13,6 @@ Plan: docs/superpowers/plans/2026-07-12-opencode-privatization.md
 
 - Batch 4 (Tasks 12-17): complete (commit a607de72b, identity strings renamed)
 
+- Batch 4 fix: complete (commit HEAD, remaining opencode.json references fixed)
+- Batch 5 (Task 19): static verification complete (bun not installed on this machine)
+

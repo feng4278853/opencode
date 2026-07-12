@@ -22,15 +22,25 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
       return {
         tokens: 0,
         percent: null,
+        cacheRead: 0,
+        cacheWrite: 0,
+        cacheHitRate: null as number | null,
       }
     }
 
     const tokens =
       last.tokens.input + last.tokens.output + last.tokens.reasoning + last.tokens.cache.read + last.tokens.cache.write
     const model = props.api.state.provider.find((item) => item.id === last.providerID)?.models[last.modelID]
+    const cacheRead = last.tokens.cache.read
+    const cacheWrite = last.tokens.cache.write
+    const inputTotal = last.tokens.input + cacheRead + cacheWrite
+    const cacheHitRate = inputTotal > 0 ? Math.round((cacheRead / inputTotal) * 100) : null
     return {
       tokens,
       percent: model?.limit.context ? Math.round((tokens / model.limit.context) * 100) : null,
+      cacheRead,
+      cacheWrite,
+      cacheHitRate,
     }
   })
 
@@ -42,6 +52,10 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
       <text fg={theme().textMuted}>{state().tokens.toLocaleString()} tokens</text>
       <text fg={theme().textMuted}>{state().percent ?? 0}% used</text>
       <text fg={theme().textMuted}>{money.format(cost())} spent</text>
+      <text fg={theme().textMuted}>cache: {state().cacheRead.toLocaleString()} read / {state().cacheWrite.toLocaleString()} write</text>
+      <text fg={theme().textMuted}>
+        {state().cacheHitRate !== null ? `hit: ${state().cacheHitRate}%` : "hit: -"}
+      </text>
     </box>
   )
 }

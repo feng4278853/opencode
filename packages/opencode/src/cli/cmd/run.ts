@@ -110,14 +110,14 @@ async function toolError(part: ToolPart) {
     const { toolInlineInfo } = await import("./run/tool")
     const next = toolInlineInfo(part)
     inline({
-      icon: "✗",
+      icon: "warning",
       title: `${next.title} failed`,
       ...(next.description && { description: next.description }),
     })
     return
   } catch {
     inline({
-      icon: "✗",
+      icon: "warning",
       title: `${part.tool} failed`,
     })
   }
@@ -130,7 +130,7 @@ export const RunCommand = effectCmd({
   // default path runs an in-process server and needs the project instance.
   instance: (args) => !args.attach,
   // For --dir without --attach, load instance for the resolved target dir.
-  // The handler also chdirs (preserving the legacy order: chdir → file resolution).
+  // The handler also chdirs (preserving the legacy order: chdir �?file resolution).
   directory: (args) => (args.dir && !args.attach ? path.resolve(process.cwd(), args.dir) : process.cwd()),
   builder: (yargs: Argv) =>
     yargs
@@ -949,7 +949,7 @@ export const RunCommand = effectCmd({
         return Server.Default().app.fetch(new Request(request, { headers }))
       }) as typeof globalThis.fetch
       const sdk = createOpencodeClient({
-        baseUrl: "http://opencode.internal",
+        baseUrl: "http://mycode.internal",
         fetch: fetchFn,
         directory,
       })

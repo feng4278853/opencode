@@ -6,7 +6,10 @@ import { ProxyUtil } from "../proxy-util"
 
 let embeddedUIPromise: Promise<Record<string, string> | null> | undefined
 
-export const UI_UPSTREAM = new URL("https://app.opencode.ai")
+// Web UI upstream disabled in privatized build — no network calls to upstream UI
+// If OPENCODE_DISABLE_EMBEDDED_WEB_UI is set, the web UI will be unreachable.
+// Users should use the local embedded web UI instead.
+export const UI_UPSTREAM = new URL("http://localhost")
 
 export const csp = (hash = "") =>
   `default-src 'self'; script-src 'self' 'wasm-unsafe-eval'${hash ? ` 'sha256-${hash}'` : ""}; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; media-src 'self' data:; connect-src * data:`

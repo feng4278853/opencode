@@ -1,20 +1,27 @@
 import type { AssistantMessage } from "@opencode-ai/sdk/v2"
 import type { TuiPlugin, TuiPluginApi } from "@opencode-ai/plugin/tui"
 import type { BuiltinTuiPlugin } from "../builtins"
-import { createMemo, Show } from "solid-js"
+import { createMemo, Show, For } from "solid-js"
 
-// Sparkline bars from low to high cache hit rate (ASCII-only to avoid
-// encoding issues that plague Unicode block characters in this file).
+// Sparkline: 8 vertical bars (low to high). ASCII-only to avoid UTF-8
+// encoding corruption seen with Unicode block characters.
 const SPARK = ".:-+*#%@$" as const
 const SPARK_STEPS = SPARK.length
 
-function sparkline(rates: number[]): string {
-  let out = ""
-  for (const r of rates) {
+// 5-tier color buckets matching the bar index.
+function sparkColor(api: TuiPluginApi, idx: number) {
+  const theme = api.theme.current
+  if (idx >= 6) return theme.success ?? theme.text ?? undefined
+  if (idx >= 4) return theme.text ?? undefined
+  if (idx >= 2) return theme.warning ?? theme.text ?? undefined
+  return theme.error ?? theme.warning ?? theme.textMuted ?? undefined
+}
+
+function sparkline(api: TuiPluginApi, rates: number[]) {
+  return rates.map((r) => {
     const idx = Math.min(SPARK_STEPS - 1, Math.max(0, Math.round((r / 100) * (SPARK_STEPS - 1))))
-    out += SPARK[idx]
-  }
-  return out
+    return { ch: SPARK[idx], color: sparkColor(api, idx) }
+  })
 }
 
 function hitColor(api: TuiPluginApi, rate: number | null) {
@@ -119,8 +126,14 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
         r/w: {stats().cumRead.toLocaleString()}/{stats().cumWrite.toLocaleString()} (last {stats().lastRead.toLocaleString()}/{stats().lastWrite.toLocaleString()})
       </text>
       <Show when={stats().history.length > 0}>
+        <box flexDirection="row" gap={0}>
+          <text fg={theme().textMuted}>trend: </text>
+          <For each={sparkline(props.api, stats().history.slice(-20))}>
+            {(seg) => <text fg={seg.color}>{seg.ch}</text>}
+          </For>
+        </box>
         <text fg={theme().textMuted}>
-          trend ({Math.min(20, stats().history.length)}): {sparkline(stats().history.slice(-20))}
+          min {Math.min(...stats().history)} / max {Math.max(...stats().history)} / last {stats().lastHit ?? "-"}%
         </text>
       </Show>
     </box>

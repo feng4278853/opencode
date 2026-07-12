@@ -33,7 +33,7 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
     const model = props.api.state.provider.find((item) => item.id === last.providerID)?.models[last.modelID]
     const cacheRead = last.tokens.cache.read
     const cacheWrite = last.tokens.cache.write
-    const inputTotal = last.tokens.input + cacheRead + cacheWrite
+    const inputTotal = last.tokens.input + cacheRead
     const cacheHitRate = inputTotal > 0 ? Math.round((cacheRead / inputTotal) * 100) : null
     return {
       tokens,

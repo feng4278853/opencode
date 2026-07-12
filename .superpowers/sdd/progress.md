@@ -16,3 +16,7 @@ Plan: docs/superpowers/plans/2026-07-12-opencode-privatization.md
 - Batch 4 fix: complete (commit HEAD, remaining opencode.json references fixed)
 - Batch 5 (Task 19): static verification complete (bun not installed on this machine)
 
+- Batch 5 fix: typecheck passed (only pre-existing errors remain), build succeeded, smoke test passed
+- CLI help text renamed to mycode
+- Binary: dist/opencode-windows-x64/bin/mycode.exe (184MB)
+

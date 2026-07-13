@@ -1,3 +1,11 @@
+// If wrapper set INIT_CWD, use it as process.cwd() so all 32 cwd-based
+// call sites see the caller's dir while bun runs from packages/opencode
+// for module resolution.
+if (process.env.INIT_CWD) {
+  try {
+    process.chdir(process.env.INIT_CWD)
+  } catch {}
+}
 import yargs from "yargs"
 import { hideBin } from "yargs/helpers"
 import { RunCommand } from "./cli/cmd/run"

@@ -13,7 +13,7 @@ export function ErrorComponent(props: { error: Error; reset: () => void; mode?: 
   const clipboard = useClipboard()
   const [copied, setCopied] = createSignal(false)
 
-  // Safe fallback palette per mode (mirrors theme/assets/opencode.json) since the
+  // Safe fallback palette per mode (mirrors theme/assets/mycode.json) since the
   // theme context may be the thing that crashed.
   const isLight = props.mode === "light"
   const colors = isLight
@@ -192,7 +192,7 @@ export function ErrorComponent(props: { error: Error; reset: () => void; mode?: 
                 ? "Report copied — paste it into a new GitHub issue."
                 : "Copy the report and open a GitHub issue to help us fix this."}
             </text>
-            <text fg={colors.muted}>opencode {InstallationVersion}</text>
+            <text fg={colors.muted}>mycode {InstallationVersion}</text>
           </box>
         </Show>
       </box>

@@ -381,7 +381,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
           }
 
           // Region resolution precedence (highest to lowest):
-          // 1. options.region from opencode.json provider config
+          // 1. options.region from mycode.json provider config
           // 2. defaultRegion from AWS_REGION environment variable
           // 3. Default "us-east-1" (baked into defaultRegion)
           const region = options?.region ?? defaultRegion
@@ -464,9 +464,9 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         autoload: false,
         options: {
           headers: {
-            "HTTP-Referer": "https://opencode.ai/",
-            "X-Title": "opencode",
-            "X-Source": "opencode",
+            "HTTP-Referer": "https://mycode.ai/",
+            "X-Title": "mycode",
+            "X-Source": "mycode",
           },
         },
       }),
@@ -475,8 +475,8 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         autoload: false,
         options: {
           headers: {
-            "HTTP-Referer": "https://opencode.ai/",
-            "X-Title": "opencode",
+            "HTTP-Referer": "https://mycode.ai/",
+            "X-Title": "mycode",
           },
         },
       }),
@@ -485,9 +485,9 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         autoload: provider.source === "config",
         options: {
           headers: {
-            "HTTP-Referer": "https://opencode.ai/",
-            "X-Title": "opencode",
-            "X-BILLING-INVOKE-ORIGIN": "OpenCode",
+            "HTTP-Referer": "https://mycode.ai/",
+            "X-Title": "mycode",
+            "X-BILLING-INVOKE-ORIGIN": "mycode",
           },
         },
       }),
@@ -496,8 +496,8 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         autoload: false,
         options: {
           headers: {
-            "http-referer": "https://opencode.ai/",
-            "x-title": "opencode",
+            "http-referer": "https://mycode.ai/",
+            "x-title": "mycode",
           },
         },
       }),
@@ -601,8 +601,8 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         autoload: false,
         options: {
           headers: {
-            "HTTP-Referer": "https://opencode.ai/",
-            "X-Title": "opencode",
+            "HTTP-Referer": "https://mycode.ai/",
+            "X-Title": "mycode",
           },
         },
       }),
@@ -871,8 +871,8 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         autoload: false,
         options: {
           headers: {
-            "HTTP-Referer": "https://opencode.ai/",
-            "X-Title": "opencode",
+            "HTTP-Referer": "https://mycode.ai/",
+            "X-Title": "mycode",
           },
         },
       }),
@@ -1402,13 +1402,14 @@ const layer = Layer.effect(
         function mergeProvider(providerID: ProviderV2.ID, provider: Partial<Info>) {
           const existing = providers[providerID]
           if (existing) {
-            // @ts-expect-error
+            // remeda's mergeDeep widens required fields to optional in its return type
+            // @ts-expect-error mergeDeep return type is structurally correct but not inferrable
             providers[providerID] = mergeDeep(existing, provider)
             return
           }
           const match = database[providerID]
           if (!match) return
-          // @ts-expect-error
+          // @ts-expect-error mergeDeep return type is structurally correct but not inferrable
           providers[providerID] = mergeDeep(match, provider)
         }
 

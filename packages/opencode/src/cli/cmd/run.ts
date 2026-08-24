@@ -110,14 +110,14 @@ async function toolError(part: ToolPart) {
     const { toolInlineInfo } = await import("./run/tool")
     const next = toolInlineInfo(part)
     inline({
-      icon: "✗",
+      icon: "warning",
       title: `${next.title} failed`,
       ...(next.description && { description: next.description }),
     })
     return
   } catch {
     inline({
-      icon: "✗",
+      icon: "warning",
       title: `${part.tool} failed`,
     })
   }
@@ -125,12 +125,12 @@ async function toolError(part: ToolPart) {
 
 export const RunCommand = effectCmd({
   command: "run [message..]",
-  describe: "run opencode with a message",
+  describe: "run mycode with a message",
   // --attach connects to a remote server (no local instance needed); the
   // default path runs an in-process server and needs the project instance.
   instance: (args) => !args.attach,
   // For --dir without --attach, load instance for the resolved target dir.
-  // The handler also chdirs (preserving the legacy order: chdir → file resolution).
+  // The handler also chdirs (preserving the legacy order: chdir �?file resolution).
   directory: (args) => (args.dir && !args.attach ? path.resolve(process.cwd(), args.dir) : process.cwd()),
   builder: (yargs: Argv) =>
     yargs
@@ -189,7 +189,7 @@ export const RunCommand = effectCmd({
       })
       .option("attach", {
         type: "string",
-        describe: "attach to a running opencode server (e.g., http://localhost:4096)",
+        describe: "attach to a running mycode server (e.g., http://localhost:4096)",
       })
       .option("password", {
         alias: ["p"],
@@ -199,7 +199,7 @@ export const RunCommand = effectCmd({
       .option("username", {
         alias: ["u"],
         type: "string",
-        describe: "basic auth username (defaults to OPENCODE_SERVER_USERNAME or 'opencode')",
+        describe: "basic auth username (defaults to OPENCODE_SERVER_USERNAME or 'mycode')",
       })
       .option("dir", {
         type: "string",
@@ -954,7 +954,7 @@ export const RunCommand = effectCmd({
         return Server.Default().app.fetch(new Request(request, { headers }))
       }) as typeof globalThis.fetch
       const sdk = createOpencodeClient({
-        baseUrl: "http://opencode.internal",
+        baseUrl: "http://mycode.internal",
         fetch: fetchFn,
         directory,
       })
@@ -982,7 +982,7 @@ type MiniCommandInput = {
 export async function runMini(input: MiniCommandInput) {
   if (!RunCommand.handler) throw new Error("Mini command handler is unavailable")
   await RunCommand.handler({
-    $0: "opencode",
+    $0: "mycode",
     _: ["mini"],
     message: input.prompt ? [input.prompt] : [],
     command: undefined,

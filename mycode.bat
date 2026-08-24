@@ -6,6 +6,7 @@ rem Save caller's directory before pushd so mycode can show it in TUI
 set "INIT_CWD=%CD%"
 set "OMO_SEND_ANONYMOUS_TELEMETRY=0"
 set "OMO_DISABLE_POSTHOG=1"
+set "OPENCODE_DISABLE_MODELS_FETCH=1"
 pushd "%SCRIPT_DIR%packages\opencode"
 "%SCRIPT_DIR%bun.exe" "src\index.ts" %*
 set "EC=%ERRORLEVEL%"

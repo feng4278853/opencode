@@ -531,6 +531,7 @@ Write-Output "一致: $($src -eq $dst)"
 - `docs/superpowers/specs/2026-07-12-opencode-privatization-design.md` —— 私有化设计 spec（改动总清单、rebase 策略、验收标准）
 - `docs/superpowers/plans/2026-07-12-opencode-privatization.md` —— 实施计划（19 个 Task 的历史执行记录，含 Account noop layer 完整代码）
 - `docs/superpowers/deployment-guide.md` —— 新机器部署指南（其"同步上游 opencode"一节以本文档主流程为准）
+- `docs/superpowers/upgrade-v1.18.21.md` —— 面向同事的存量升级操作指南（v1.17.18 → v1.18.21）
 - `opencode私有化需求.md` —— 原始需求（EDR 约束、可跟随升级）
 
 ---

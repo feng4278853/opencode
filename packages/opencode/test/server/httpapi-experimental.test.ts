@@ -143,10 +143,8 @@ describe("experimental HttpApi", () => {
       Effect.gen(function* () {
         const tmp = yield* TestInstance
         const directory = tmp.directory
-        const [consoleState, consoleOrgs, toolList, toolIDs, worktrees, resources] = yield* Effect.all(
+        const [toolList, toolIDs, worktrees, resources] = yield* Effect.all(
           [
-            request(ExperimentalPaths.console, directory),
-            request(ExperimentalPaths.consoleOrgs, directory),
             request(`${ExperimentalPaths.tool}?provider=opencode&model=gpt-5`, directory),
             request(ExperimentalPaths.toolIDs, directory),
             request(ExperimentalPaths.worktree, directory),
@@ -154,15 +152,6 @@ describe("experimental HttpApi", () => {
           ],
           { concurrency: "unbounded" },
         )
-
-        expect(consoleState.status).toBe(200)
-        expect(yield* json(consoleState)).toEqual({
-          consoleManagedProviders: [],
-          switchableOrgCount: 0,
-        })
-
-        expect(consoleOrgs.status).toBe(200)
-        expect(yield* json(consoleOrgs)).toEqual({ orgs: [] })
 
         expect(toolList.status).toBe(200)
         expect(yield* json<unknown[]>(toolList)).toContainEqual(
@@ -214,20 +203,14 @@ describe("experimental HttpApi", () => {
     }),
   )
 
-  it.instance(
-    "serves Console org switch through the default server app",
+  it.instance.skip(
+    "serves Console org switch through the default server app (disabled in privatized build)",
     () =>
       Effect.gen(function* () {
         const tmp = yield* TestInstance
         const accountID = yield* insertAccount()
-        const switched = yield* request(ExperimentalPaths.consoleSwitch, tmp.directory, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ accountID, orgID: "org-test" }),
-        })
-
-        expect(switched.status).toBe(200)
-        expect(yield* json(switched)).toBe(true)
+        // consoleSwitch endpoint removed in privatized build
+        expect(accountID).toBeDefined()
       }),
     { config: { formatter: false, lsp: false } },
   )

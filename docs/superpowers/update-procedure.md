@@ -1,14 +1,22 @@
 # mycode 版本更新流程
 
 本文档说明如何在上游 opencode 发布新版本时，把自定义的 mycode 改动同步到新版本。
-**本文档于 2026-08-23 基于当前分支全部 38 个自定义提交逐一核实后重写**，文件路径与行为均与代码树核对过；文中行号以基线 `34e580905` 为准，升级后行号会漂移，以内容匹配为准。
+**2026-08-23 基于分支全部 39 个自定义提交逐一核实重写；2026-08-24 完成首次按本文档流程的升级（v1.17.18 → v1.18.21），升级记录见文末。** 文中行号以写作时的代码树为准，升级后会漂移，以内容匹配为准。
 
 ## 背景
 
 - **上游**：`anomalyco/opencode`（原 sst/opencode → opencode-ai/opencode，组织迁移后的现归属），发布版本以 `v` 开头的 release tag 标记
-- **fork**：`feng4278853/opencode` 的 `my-opencode-dec` 分支
-- **当前基点**：`34e580905`（feat(tui): show idle session directory #36457，2026-07-11，对应 v1.17.18 + 25 个 dev 提交）
-- **自定义提交：38 个**（含 1 个 merge），按主题分八类：
+- **fork**：`feng4278853/opencode` 的 `my-opencode-dec` 分支（2026-08-24 起升级工作在 `my-opencode-20260823` 分支进行）
+- **当前基点**：`v1.18.21`（`826d9ad46a`，release: v1.18.21，2026-08-21）
+- **自定义提交：6 个主题提交**（2026-08-24 由原始 39 个提交压缩而来，历史明细保留下方仅作考古参考）：
+  1. `docs: privatization design, plans, update procedure, deployment guide`
+  2. `feat(tui): cache hit rate sparkline in context sidebar`
+  3. `fix(mycode): wrapper, cwd preservation and build config`
+  4. `feat: disable cloud and telemetry for privatized build`
+  5. `refactor: rename opencode to mycode`
+  6. `fix: keep models catalog source at models.dev to avoid opencode.ai contact`
+
+- **原始 39 个提交的主题分布**（历史记录，已压缩进上述 6 个主题提交）：
   1. **遥测/回传禁用**：`0348d0cc8`（自动更新检查 + OTLP）、`896fd853c`（网络后门与 EDR 可检测字符串，横跨 20 文件）、`af091370d`（oh-my-openagent PostHog 禁用，`OMO_*` 环境变量）
   2. **云端功能摘除**：`571881b3d`（provider/share/account/console/enterprise）、`6e3f0d160`（删 github/import 命令 + 修连锁类型错误）
   3. **路径/配置改名**：`f9a162ad4`（XDG 根、`.opencode`→`.mycode`）、`a04dff66b`（opencode.json 残留引用）、`cba2190ce`（修复 $schema 重复注入）
@@ -353,10 +361,10 @@ Write-Output "完成。请运行 typecheck 和 build 验证。"
 
 | # | 位置 | 问题 | 处置建议 |
 |---|---|---|---|
-| 1 | `packages/opencode/src/config/config.ts:398` | 项目级配置发现仍传 `"opencode"`（`ConfigPaths.files("opencode", ...)`） | 升级时确认语义后改为 `"mycode"`，并回归验证项目内 `.mycode/` 配置加载 |
-| 2 | `packages/opencode/src/config/config.ts:180` | 悬空的 `const accountSvc = yield* Account.Service`（account 同步块删除后残留，无使用点） | rebase 后顺手删除，避免上游 Account 接口变化引发无谓类型错误 |
+| 1 | `packages/opencode/src/config/config.ts:398` | 项目级配置发现仍传 `"opencode"`（`ConfigPaths.files("opencode", ...)`） | 升级时确认语义后改为 `"mycode"`，并回归验证项目内 `.mycode/` 配置加载（2026-08-24 升级后仍在，待决策） |
+| 2 | `packages/opencode/src/config/config.ts:180` | 悬空的 `const accountSvc = yield* Account.Service`（account 同步块删除后残留，无使用点） | rebase 后顺手删除，避免上游 Account 接口变化引发无谓类型错误（2026-08-24 升级后仍在，typecheck 无报错） |
 | 3 | `packages/tui/src/util/presentation.ts:1-4` | 像素 MYCODE 的内联副本（与 `tui/src/logo.ts` 重复），session epilogue 用 | 保留（低风险）；上游重构 presentation 时记得同步像素画 |
-| 4 | `.husky/pre-push` | 文件模式 100755 → 100644（丢失可执行位） | `git update-index --chmod=+x .husky/pre-push` |
+| 4 | ~~`.husky/pre-push`~~ | ~~文件模式 100755 → 100644（丢失可执行位）~~ | ✅ 已在 2026-08-24 升级的压缩提交中自动恢复 755 |
 
 ## 关键文件清单（已核实）
 
@@ -524,3 +532,41 @@ Write-Output "一致: $($src -eq $dst)"
 - `docs/superpowers/plans/2026-07-12-opencode-privatization.md` —— 实施计划（19 个 Task 的历史执行记录，含 Account noop layer 完整代码）
 - `docs/superpowers/deployment-guide.md` —— 新机器部署指南（其"同步上游 opencode"一节以本文档主流程为准）
 - `opencode私有化需求.md` —— 原始需求（EDR 约束、可跟随升级）
+
+---
+
+## 升级记录：2026-08-24 v1.17.18 → v1.18.21
+
+首次按本文档流程执行的完整升级，全部检查项通过。
+
+**执行摘要**：
+
+| 项 | 结果 |
+|---|---|
+| 目标 | `v1.18.21`（`826d9ad46a`），上游 603 个新提交 |
+| 冲突面 | 27 个双方修改文件 + 2 个 delete/modify（enterprise），全部按主题策略解决 |
+| 历史压缩 | 39 个原始提交 → 5 个主题提交 + 1 个 models.dev 专项提交 |
+| 零损失证明 | 压缩后 `git diff backup-20260824` 仅差 pre-push 执行位（属修复），内容零差异 |
+| 保全审计 | marker 清单全 PASS；155 个改动文件 154 个进入新 delta，唯一例外 bun.lock（按策略重生成） |
+| typecheck | `packages/opencode` **0 错误**（优于旧基线的 6 个预存错误） |
+| 构建 | Smoke test passed: 1.0.0，产物 `dist/opencode-windows-x64/bin/mycode.exe`（178MB） |
+| 冒烟 | `--version` 1.0.0；`--help` 零 opencode 残留；wrapper 真实调用 GLM 正常响应 |
+| 网络验证 | 运行时 netstat 快照：外连仅 bigmodel 模型端点（IPv6 与 `open.bigmodel.cn` 解析吻合）+ localhost MCP，白名单外出口为 0 |
+
+**本次升级的关键处理**：
+
+1. **models 目录源**：上游把默认源从 `https://models.dev` 改为 `https://models.opencode.ai`（opencode 官方域）。已恢复为 `models.dev`（专项提交），保持既有行为、不引入官方交互。
+2. **console URL 变更**：上游 v1.18.19 把 account 连接的默认 Console URL 改为 `https://opencode.ai/console`（commit `2cba7e227d`）。我方 `provider/opencode.ts` 的 `defaultServer = ""` 在冲突中保留，且该 provider 未注册，双保险。
+3. **Account 接口**：上游给 `Account.remove` 增加了"删除后切换到下一个 org"逻辑。我方 noopLayer 不受影响（`remove` 仍是 `Effect.void`），冲突中保留我方实现。
+4. **models.dev 在本网络不可达**（直连与代理均拒）：构建时用 `~/.cache/mycode/models.json`（运行时缓存快照，Jul 22 版）起本地 HTTP 服务，通过 `OPENCODE_MODELS_URL=http://127.0.0.1:18923` 喂给 `script/generate.ts`。注意 `MODELS_DEV_API_JSON` 环境变量因 Windows 32KB 上限放不下 3.2MB 的 JSON，不可用。运行时对 models.dev 不可达本身有回退（落缓存文件），无需处理。
+5. **enterprise**：上游 6 周仅改了 2 个文件，`git rm` 重删即完成，根 package.json 无需改动。
+
+**运行时网络静态审计结论**（v1.18.21 基础上）：
+
+- 活代码路径对 opencode 官方设施连接数为 0（provider 未注册 + server 置空、account/share/upgrade/otlp 全 no-op、models 源为第三方 models.dev）
+- `mycode.ai` 域名 8 处为改名产物（HTTP-Referer 头等，指向不存在的域，安全）
+- 预存非 opencode 出网点（非本次升级引入，维持原状）：
+  - LSP 二进制从 `api.github.com` 的第三方 releases 下载（zls/clangd 等，`"lsp": true` 配置驱动）
+  - prompt 文本（`session/prompt/*.txt` 3 处）指示 AI 在用户问及 opencode 功能时 WebFetch `opencode.ai/docs`——属 AI 指令字符串，触发条件罕见；如需彻底清零可改为本地文档指引
+
+**回滚点**：`backup-20260824` tag（已推送 origin）= 升级前的 39 提交原始状态；原始提交历史（含 bacc65ba3 等 rename.ps1 参考的 commit hash）保存在该 tag 中。

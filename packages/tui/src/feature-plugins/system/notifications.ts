@@ -23,7 +23,11 @@ function sessionErrorMessage(error: SessionError) {
   if (data && typeof data === "object" && "message" in data && data.message === "SSE read timed out") {
     return "Model stopped responding"
   }
-  return "Session error"
+  const detail =
+    data && typeof data === "object" && "message" in data && typeof data.message === "string"
+      ? data.message
+      : error?.name
+  return detail ? `Session error: ${detail}` : "Session error"
 }
 
 const tui: TuiPlugin = async (api) => {
@@ -35,7 +39,8 @@ const tui: TuiPlugin = async (api) => {
   api.event.on("question.asked", (event) => {
     if (questions.has(event.properties.id)) return
     questions.add(event.properties.id)
-    notify(api, event.properties.sessionID, "Question needs input", "question")
+    const first = event.properties.questions[0]
+    notify(api, event.properties.sessionID, first ? `Question: ${first.question}` : "Question needs input", "question")
   })
 
   api.event.on("question.replied", (event) => {
@@ -49,7 +54,15 @@ const tui: TuiPlugin = async (api) => {
   api.event.on("permission.asked", (event) => {
     if (permissions.has(event.properties.id)) return
     permissions.add(event.properties.id)
-    notify(api, event.properties.sessionID, "Permission needs input", "permission")
+    const detail = event.properties.patterns.filter((item) => item.trim()).join(" ")
+    notify(
+      api,
+      event.properties.sessionID,
+      detail
+        ? `Permission: ${event.properties.permission} — ${detail}`
+        : `Permission: ${event.properties.permission}`,
+      "permission",
+    )
   })
 
   api.event.on("permission.replied", (event) => {

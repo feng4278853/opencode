@@ -404,6 +404,7 @@ packages/tui/src/component/logo.tsx               # 启动页文字 wordmark（h
 packages/tui/src/logo.ts                          # 像素 MYCODE（go 被 bg-pulse-render 用）
 packages/tui/src/util/presentation.ts             # 像素副本（session epilogue）
 packages/tui/src/feature-plugins/sidebar/context.tsx  # ★ 自研：cache hit rate + 彩色 sparkline
+packages/tui/src/attention.ts                      # ★ 自研：Windows toast 后台提醒（上游 OSC 99 协议 Windows Terminal 不支持）
 
 # 文档
 docs/superpowers/specs/2026-07-12-opencode-privatization-design.md   # 设计 spec（改动总清单）

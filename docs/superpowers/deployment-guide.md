@@ -120,6 +120,24 @@ mycode upgrade
 | 日志 | `~/.local/share/mycode/log/mycode.log` | 运行日志 |
 | 插件缓存 | `~/.cache/mycode/packages/` | npm/git 拉取的插件 |
 
+## 后台弹窗提醒（可选）
+
+mycode 最小化/后台运行时（终端窗口不在前台），**任务完成、报错、等待权限或问题决策**会发 Windows 弹窗 + 声音提醒。默认关闭，在 `~/.config/mycode/tui.json` 写入：
+
+```jsonc
+{
+  "attention": {
+    "enabled": true,
+    "notifications": true,
+    "sound": true,
+    "volume": 0.4
+  }
+}
+```
+
+- 前台使用时不打扰（仅失焦/最小化时提醒）
+- 弹窗走 Windows 原生 toast（mycode 私有化改动：上游的 OSC 通知协议 Windows Terminal 不支持）
+
 ## EDR 兼容性
 
 mycode 通过 `mycode.bat` 启动，内部调用仓库根目录的 `bun.exe`（98MB）。

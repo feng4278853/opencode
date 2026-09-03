@@ -111,6 +111,28 @@ function focusSkip(when: TuiAttentionWhen, focus: FocusState) {
   if (when === "focused" && focus === "blurred") return "blurred"
 }
 
+// Windows Terminal does not support the OSC notification protocol the renderer
+// uses, so we surface attention messages as native Windows toasts via
+// PowerShell WinRT. Title/body travel through env vars to sidestep
+// command-line encoding and quoting issues with non-ASCII text.
+function windowsToast(title: string, message: string) {
+  const ps = [
+    "[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null",
+    "$xml = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType]::ToastText02)",
+    "$texts = $xml.GetElementsByTagName('text')",
+    "$texts.Item(0).AppendChild($xml.CreateTextNode($env:MC_TOAST_TITLE)) | Out-Null",
+    "$texts.Item(1).AppendChild($xml.CreateTextNode($env:MC_TOAST_MSG)) | Out-Null",
+    "[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\\WindowsPowerShell\\v1.0\\powershell.exe').Show([Windows.UI.Notifications.ToastNotification]::new($xml))",
+  ].join("\n")
+  const encoded = Buffer.from(ps, "utf16le").toString("base64")
+  Bun.spawn(["powershell.exe", "-NoProfile", "-EncodedCommand", encoded], {
+    env: { ...process.env, MC_TOAST_TITLE: title, MC_TOAST_MSG: message },
+    stdout: "ignore",
+    stderr: "ignore",
+    windowsHide: true,
+  })
+}
+
 export function createTuiAttention(input: {
   renderer: AttentionRenderer
   config: Pick<TuiConfig.Resolved, "attention">
@@ -182,10 +204,10 @@ export function createTuiAttention(input: {
         const notification = shouldNotify
           ? (() => {
               try {
-                return input.renderer.triggerNotification(
-                  message,
-                  normalizeText(request.title, DEFAULT_TITLE, TITLE_LIMIT),
-                )
+                const title = normalizeText(request.title, DEFAULT_TITLE, TITLE_LIMIT)
+                const win32 = process.platform === "win32"
+                if (win32) void windowsToast(title, message)
+                return input.renderer.triggerNotification(message, title) || win32
               } catch (error) {
                 console.debug("failed to trigger attention notification", { error })
                 return false

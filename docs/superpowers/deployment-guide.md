@@ -120,9 +120,24 @@ mycode upgrade
 | 日志 | `~/.local/share/mycode/log/mycode.log` | 运行日志 |
 | 插件缓存 | `~/.cache/mycode/packages/` | npm/git 拉取的插件 |
 
-## 后台弹窗提醒（可选）
+## 后台弹窗提醒（可选，推荐开启）
 
-mycode 最小化/后台运行时（终端窗口不在前台），**任务完成、报错、等待权限或问题决策**会发 Windows 弹窗 + 声音提醒。默认关闭，在 `~/.config/mycode/tui.json` 写入：
+mycode 最小化/后台运行时（终端窗口不在前台），**任务完成、报错、等待权限或问题决策**会发 Windows 弹窗 + 声音提醒；**点击弹窗可直接把 mycode 窗口调到前台**。
+
+### 同事启用步骤（一次性，2 步）
+
+```powershell
+# 1. 升级代码（标准升级流程，见 upgrade-v1.18.21.md）
+git fetch origin
+git checkout my-opencode-dec
+git reset --hard origin/my-opencode-dec
+bun.exe install --ignore-scripts
+
+# 2. 开启提醒（每人自己的配置，不在 git 里）
+notepad $env:USERPROFILE\.config\mycode\tui.json
+```
+
+`tui.json` 写入：
 
 ```jsonc
 {
@@ -135,8 +150,22 @@ mycode 最小化/后台运行时（终端窗口不在前台），**任务完成�
 }
 ```
 
+重启 mycode 生效。
+
+### 无需任何操作的自动化项
+
+| 项 | 机制 |
+|---|---|
+| 薄荷绿图标 / 聚焦脚本 / wscript 启动器 | 第一个弹窗触发时自动生成到 `~/.cache/mycode/notify/`（稳定目录，不会被系统清理） |
+| `mycode://` 点击聚焦协议 | 第一个弹窗时自动注册（HKCU 注册表，无需管理员），过期进通知中心后点击同样有效 |
+| 弹窗内容 | 自动带上会话/任务名 + 具体内容（完成的任务、要执行的命令、错误详情、问题原文），emoji 区分类型 |
+
+### 前提与注意事项
+
+- Windows 系统通知需开启（设置 → 系统 → 通知，默认开启）；**专注助手/勿扰模式会拦截横幅**，收不到弹窗先检查这里
 - 前台使用时不打扰（仅失焦/最小化时提醒）
-- 弹窗走 Windows 原生 toast（mycode 私有化改动：上游的 OSC 通知协议 Windows Terminal 不支持）
+- 弹窗停留约 25 秒（long 档），点击或关闭立即消失
+- 弹窗走 Windows 原生 toast（mycode 私有化改动：上游的 OSC 通知协议 Windows Terminal 不支持；聚焦链路用 wscript 隐形启动，无窗口闪现）
 
 ## EDR 兼容性
 

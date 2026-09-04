@@ -122,7 +122,9 @@ function focusSkip(when: TuiAttentionWhen, focus: FocusState) {
 function windowsToast(title: string, message: string) {
   const ps = `
 $ErrorActionPreference = 'Stop'
-$icon = Join-Path $env:TEMP 'mycode-toast-icon.png'
+$ndir = Join-Path $env:USERPROFILE '.cache\\mycode\\notify'
+New-Item -ItemType Directory -Path $ndir -Force | Out-Null
+$icon = Join-Path $ndir 'mycode-toast-icon.png'
 if (-not (Test-Path $icon)) {
   try {
     Add-Type -AssemblyName System.Drawing
@@ -144,7 +146,7 @@ if (-not (Test-Path $icon)) {
     $bmp.Dispose()
   } catch { $icon = $null }
 }
-$focus = Join-Path $env:TEMP 'mycode-focus.ps1'
+$focus = Join-Path $ndir 'mycode-focus.ps1'
 if (-not (Test-Path $focus)) {
   Set-Content -Path $focus -Encoding ASCII -Value @'
 $ErrorActionPreference = 'SilentlyContinue'
@@ -176,12 +178,12 @@ $myThread = [Win32Focus]::GetCurrentThreadId()
 [Win32Focus]::AttachThreadInput($myThread, $fgThread, $false) | Out-Null
 '@
 }
-$vbs = Join-Path $env:TEMP 'mycode-focus.vbs'
+$vbs = Join-Path $ndir 'mycode-focus.vbs'
 if (-not (Test-Path $vbs)) {
   Set-Content -Path $vbs -Encoding ASCII -Value @'
 Dim sh, ps
 Set sh = CreateObject("WScript.Shell")
-ps = sh.ExpandEnvironmentStrings("%TEMP%\\mycode-focus.ps1")
+ps = sh.ExpandEnvironmentStrings("%USERPROFILE%\\.cache\\mycode\\notify\\mycode-focus.ps1")
 sh.Run "powershell.exe -NoProfile -ExecutionPolicy Bypass -File """ & ps & """", 0, False
 '@
 }

@@ -167,6 +167,9 @@ $target = $all | Where-Object { $_.MainWindowTitle -like 'mycode*' } | Select-Ob
 if (-not $target) {
   $target = $all | Where-Object { $_.ProcessName -eq 'bun' } | Select-Object -First 1
 }
+if (-not $target) {
+  $target = $all | Where-Object { $_.ProcessName -eq 'WindowsTerminal' } | Select-Object -First 1
+}
 if (-not $target) { exit 0 }
 $h = [IntPtr]$target.MainWindowHandle
 $fgPid = [uint32]0

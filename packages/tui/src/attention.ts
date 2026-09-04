@@ -117,6 +117,8 @@ function focusSkip(when: TuiAttentionWhen, focus: FocusState) {
 // command-line encoding and quoting issues with non-ASCII text.
 // The mint-green "M" badge is generated once with System.Drawing and cached in
 // %TEMP%; toasts render silent because the attention sound pack owns audio.
+// Clicking a toast activates the mycode:// protocol, which lazily registers
+// itself here and focuses the terminal window via the cached handler script.
 function windowsToast(title: string, message: string) {
   const ps = `
 $ErrorActionPreference = 'Stop'
@@ -142,13 +144,47 @@ if (-not (Test-Path $icon)) {
     $bmp.Dispose()
   } catch { $icon = $null }
 }
+$focus = Join-Path $env:TEMP 'mycode-focus.ps1'
+if (-not (Test-Path $focus)) {
+  Set-Content -Path $focus -Encoding ASCII -Value @'
+$ErrorActionPreference = 'SilentlyContinue'
+Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+public class Win32Focus {
+  [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int cmd);
+  [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
+  [DllImport("user32.dll")] public static extern void keybd_event(byte vk, byte scan, uint flags, UIntPtr extra);
+}
+"@
+$all = Get-Process | Where-Object { $_.MainWindowHandle -ne 0 }
+$target = $all | Where-Object { $_.MainWindowTitle -like 'mycode*' } | Select-Object -First 1
+if (-not $target) {
+  $target = $all | Where-Object { $_.ProcessName -eq 'bun' } | Select-Object -First 1
+}
+if (-not $target) { exit 0 }
+$h = [IntPtr]$target.MainWindowHandle
+[Win32Focus]::ShowWindow($h, 9) | Out-Null
+[Win32Focus]::keybd_event(0x12, 0, 0, [UIntPtr]::Zero)
+[Win32Focus]::keybd_event(0x12, 0, 2, [UIntPtr]::Zero)
+[Win32Focus]::SetForegroundWindow($h) | Out-Null
+'@
+}
+$regKey = 'HKCU:\\Software\\Classes\\mycode'
+if (-not (Test-Path $regKey)) {
+  New-Item -Path $regKey -Force | Out-Null
+  Set-Item -Path $regKey -Value 'URL:mycode'
+  Set-ItemProperty -Path $regKey -Name 'URL Protocol' -Value ''
+  New-Item -Path "$regKey\\shell\\open\\command" -Force | Out-Null
+  Set-Item -Path "$regKey\\shell\\open\\command" -Value ('powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "' + $focus + '"')
+}
 function Esc([string]$s) { $s.Replace('&', '&amp;').Replace('<', '&lt;').Replace('>', '&gt;') }
 $imageNode = ''
 if ($icon -and (Test-Path $icon)) { $imageNode = '<image placement="appLogoOverride" hint-crop="circle" src="' + ([Uri]$icon).AbsoluteUri + '"/>' }
 [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
 [Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime] | Out-Null
 $xml = New-Object Windows.Data.Xml.Dom.XmlDocument
-$xml.LoadXml('<toast duration="short"><visual><binding template="ToastGeneric">' + $imageNode + '<text>' + (Esc $env:MC_TOAST_TITLE) + '</text><text>' + (Esc $env:MC_TOAST_MSG) + '</text><text placement="attribution">mycode</text></binding></visual><audio silent="true"/></toast>')
+$xml.LoadXml('<toast activationType="protocol" launch="mycode:focus" duration="short"><visual><binding template="ToastGeneric">' + $imageNode + '<text>' + (Esc $env:MC_TOAST_TITLE) + '</text><text>' + (Esc $env:MC_TOAST_MSG) + '</text><text placement="attribution">mycode</text></binding></visual><audio silent="true"/></toast>')
 [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\\WindowsPowerShell\\v1.0\\powershell.exe').Show([Windows.UI.Notifications.ToastNotification]::new($xml))
 `
   const encoded = Buffer.from(ps, "utf16le").toString("base64")

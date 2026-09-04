@@ -201,7 +201,7 @@ if ($icon -and (Test-Path $icon)) { $imageNode = '<image placement="appLogoOverr
 [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
 [Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime] | Out-Null
 $xml = New-Object Windows.Data.Xml.Dom.XmlDocument
-$xml.LoadXml('<toast activationType="protocol" launch="mycode:focus" duration="short"><visual><binding template="ToastGeneric">' + $imageNode + '<text>' + (Esc $env:MC_TOAST_TITLE) + '</text><text>' + (Esc $env:MC_TOAST_MSG) + '</text><text placement="attribution">mycode</text></binding></visual><audio silent="true"/></toast>')
+$xml.LoadXml('<toast activationType="protocol" launch="mycode:focus" duration="long"><visual><binding template="ToastGeneric">' + $imageNode + '<text>' + (Esc $env:MC_TOAST_TITLE) + '</text><text>' + (Esc $env:MC_TOAST_MSG) + '</text><text placement="attribution">mycode</text></binding></visual><audio silent="true"/></toast>')
 [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\\WindowsPowerShell\\v1.0\\powershell.exe').Show([Windows.UI.Notifications.ToastNotification]::new($xml))
 `
   const encoded = Buffer.from(ps, "utf16le").toString("base64")

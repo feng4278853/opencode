@@ -154,7 +154,10 @@ using System.Runtime.InteropServices;
 public class Win32Focus {
   [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int cmd);
   [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
-  [DllImport("user32.dll")] public static extern void keybd_event(byte vk, byte scan, uint flags, UIntPtr extra);
+  [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+  [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);
+  [DllImport("kernel32.dll")] public static extern uint GetCurrentThreadId();
+  [DllImport("user32.dll")] public static extern bool AttachThreadInput(uint a, uint b, bool attach);
 }
 "@
 $all = Get-Process | Where-Object { $_.MainWindowHandle -ne 0 }
@@ -164,19 +167,33 @@ if (-not $target) {
 }
 if (-not $target) { exit 0 }
 $h = [IntPtr]$target.MainWindowHandle
+$fgPid = [uint32]0
+$fgThread = [Win32Focus]::GetWindowThreadProcessId([Win32Focus]::GetForegroundWindow(), [ref]$fgPid)
+$myThread = [Win32Focus]::GetCurrentThreadId()
+[Win32Focus]::AttachThreadInput($myThread, $fgThread, $true) | Out-Null
 [Win32Focus]::ShowWindow($h, 9) | Out-Null
-[Win32Focus]::keybd_event(0x12, 0, 0, [UIntPtr]::Zero)
-[Win32Focus]::keybd_event(0x12, 0, 2, [UIntPtr]::Zero)
 [Win32Focus]::SetForegroundWindow($h) | Out-Null
+[Win32Focus]::AttachThreadInput($myThread, $fgThread, $false) | Out-Null
+'@
+}
+$vbs = Join-Path $env:TEMP 'mycode-focus.vbs'
+if (-not (Test-Path $vbs)) {
+  Set-Content -Path $vbs -Encoding ASCII -Value @'
+Dim sh, ps
+Set sh = CreateObject("WScript.Shell")
+ps = sh.ExpandEnvironmentStrings("%TEMP%\\mycode-focus.ps1")
+sh.Run "powershell.exe -NoProfile -ExecutionPolicy Bypass -File """ & ps & """", 0, False
 '@
 }
 $regKey = 'HKCU:\\Software\\Classes\\mycode'
-if (-not (Test-Path $regKey)) {
+$cmdKey = "$regKey\\shell\\open\\command"
+$want = 'wscript.exe "' + $vbs + '"'
+if (-not (Test-Path $cmdKey) -or (Get-Item $cmdKey).GetValue('') -ne $want) {
   New-Item -Path $regKey -Force | Out-Null
   Set-Item -Path $regKey -Value 'URL:mycode'
   Set-ItemProperty -Path $regKey -Name 'URL Protocol' -Value ''
-  New-Item -Path "$regKey\\shell\\open\\command" -Force | Out-Null
-  Set-Item -Path "$regKey\\shell\\open\\command" -Value ('powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "' + $focus + '"')
+  New-Item -Path $cmdKey -Force | Out-Null
+  Set-Item -Path $cmdKey -Value $want
 }
 function Esc([string]$s) { $s.Replace('&', '&amp;').Replace('<', '&lt;').Replace('>', '&gt;') }
 $imageNode = ''

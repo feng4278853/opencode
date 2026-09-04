@@ -18,16 +18,16 @@ function notify(api: TuiPluginApi, sessionID: string | undefined, message: strin
 }
 
 function sessionErrorMessage(error: SessionError) {
-  if (error?.name === "MessageAbortedError") return "Session aborted"
+  if (error?.name === "MessageAbortedError") return "⚠️ Session aborted"
   const data = error?.data
   if (data && typeof data === "object" && "message" in data && data.message === "SSE read timed out") {
-    return "Model stopped responding"
+    return "⚠️ Model stopped responding"
   }
   const detail =
     data && typeof data === "object" && "message" in data && typeof data.message === "string"
       ? data.message
       : error?.name
-  return detail ? `Session error: ${detail}` : "Session error"
+  return detail ? `⚠️ Session error: ${detail}` : "⚠️ Session error"
 }
 
 const tui: TuiPlugin = async (api) => {
@@ -40,7 +40,7 @@ const tui: TuiPlugin = async (api) => {
     if (questions.has(event.properties.id)) return
     questions.add(event.properties.id)
     const first = event.properties.questions[0]
-    notify(api, event.properties.sessionID, first ? `Question: ${first.question}` : "Question needs input", "question")
+    notify(api, event.properties.sessionID, first ? `❓ Question: ${first.question}` : "❓ Question needs input", "question")
   })
 
   api.event.on("question.replied", (event) => {
@@ -59,8 +59,8 @@ const tui: TuiPlugin = async (api) => {
       api,
       event.properties.sessionID,
       detail
-        ? `Permission: ${event.properties.permission} — ${detail}`
-        : `Permission: ${event.properties.permission}`,
+        ? `🔑 Permission: ${event.properties.permission} — ${detail}`
+        : `🔑 Permission: ${event.properties.permission}`,
       "permission",
     )
   })
@@ -87,7 +87,7 @@ const tui: TuiPlugin = async (api) => {
     }
 
     const session = api.state.session.get(sessionID)
-    notify(api, sessionID, "Session done", session?.parentID ? "subagent_done" : "done")
+    notify(api, sessionID, "✅ Session done", session?.parentID ? "subagent_done" : "done")
   })
 
   api.event.on("session.error", (event) => {

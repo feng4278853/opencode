@@ -115,15 +115,42 @@ function focusSkip(when: TuiAttentionWhen, focus: FocusState) {
 // uses, so we surface attention messages as native Windows toasts via
 // PowerShell WinRT. Title/body travel through env vars to sidestep
 // command-line encoding and quoting issues with non-ASCII text.
+// The mint-green "M" badge is generated once with System.Drawing and cached in
+// %TEMP%; toasts render silent because the attention sound pack owns audio.
 function windowsToast(title: string, message: string) {
-  const ps = [
-    "[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null",
-    "$xml = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType]::ToastText02)",
-    "$texts = $xml.GetElementsByTagName('text')",
-    "$texts.Item(0).AppendChild($xml.CreateTextNode($env:MC_TOAST_TITLE)) | Out-Null",
-    "$texts.Item(1).AppendChild($xml.CreateTextNode($env:MC_TOAST_MSG)) | Out-Null",
-    "[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\\WindowsPowerShell\\v1.0\\powershell.exe').Show([Windows.UI.Notifications.ToastNotification]::new($xml))",
-  ].join("\n")
+  const ps = `
+$ErrorActionPreference = 'Stop'
+$icon = Join-Path $env:TEMP 'mycode-toast-icon.png'
+if (-not (Test-Path $icon)) {
+  try {
+    Add-Type -AssemblyName System.Drawing
+    $size = 96
+    $bmp = New-Object System.Drawing.Bitmap($size, $size)
+    $g = [System.Drawing.Graphics]::FromImage($bmp)
+    $g.SmoothingMode = 'AntiAlias'
+    $g.Clear([System.Drawing.Color]::Transparent)
+    $rect = New-Object System.Drawing.Rectangle(4, 4, ($size - 8), ($size - 8))
+    $brush = New-Object System.Drawing.Drawing2D.LinearGradientBrush($rect, [System.Drawing.Color]::FromArgb(255, 126, 213, 192), [System.Drawing.Color]::FromArgb(255, 84, 170, 154), 45)
+    $g.FillEllipse($brush, $rect)
+    $font = New-Object System.Drawing.Font('Segoe UI', 42, [System.Drawing.FontStyle]::Bold, [System.Drawing.GraphicsUnit]::Pixel)
+    $fmt = New-Object System.Drawing.StringFormat
+    $fmt.Alignment = 'Center'
+    $fmt.LineAlignment = 'Center'
+    $g.DrawString('M', $font, [System.Drawing.Brushes]::White, (New-Object System.Drawing.RectangleF(0, 0, $size, $size)), $fmt)
+    $g.Dispose()
+    $bmp.Save($icon, [System.Drawing.Imaging.ImageFormat]::Png)
+    $bmp.Dispose()
+  } catch { $icon = $null }
+}
+function Esc([string]$s) { $s.Replace('&', '&amp;').Replace('<', '&lt;').Replace('>', '&gt;') }
+$imageNode = ''
+if ($icon -and (Test-Path $icon)) { $imageNode = '<image placement="appLogoOverride" hint-crop="circle" src="' + ([Uri]$icon).AbsoluteUri + '"/>' }
+[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
+[Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime] | Out-Null
+$xml = New-Object Windows.Data.Xml.Dom.XmlDocument
+$xml.LoadXml('<toast duration="short"><visual><binding template="ToastGeneric">' + $imageNode + '<text>' + (Esc $env:MC_TOAST_TITLE) + '</text><text>' + (Esc $env:MC_TOAST_MSG) + '</text><text placement="attribution">mycode</text></binding></visual><audio silent="true"/></toast>')
+[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\\WindowsPowerShell\\v1.0\\powershell.exe').Show([Windows.UI.Notifications.ToastNotification]::new($xml))
+`
   const encoded = Buffer.from(ps, "utf16le").toString("base64")
   Bun.spawn(["powershell.exe", "-NoProfile", "-EncodedCommand", encoded], {
     env: { ...process.env, MC_TOAST_TITLE: title, MC_TOAST_MSG: message },

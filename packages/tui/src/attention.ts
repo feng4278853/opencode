@@ -122,6 +122,21 @@ function focusSkip(when: TuiAttentionWhen, focus: FocusState) {
 function windowsToast(title: string, message: string) {
   const ps = `
 $ErrorActionPreference = 'Stop'
+# Windows Terminal does not report focus to terminal apps, so the TUI-side
+# blur filter is unreliable here: check the real foreground window instead and
+# skip the toast when the user is already looking at mycode.
+Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+using System.Text;
+public class Win32Fg {
+  [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+  [DllImport("user32.dll")] public static extern int GetWindowText(IntPtr h, StringBuilder s, int n);
+}
+"@
+$fgText = New-Object System.Text.StringBuilder 256
+[Win32Fg]::GetWindowText([Win32Fg]::GetForegroundWindow(), $fgText, 256) | Out-Null
+if ($fgText.ToString() -like 'mycode*') { exit 0 }
 $ndir = Join-Path $env:USERPROFILE '.cache\\mycode\\notify'
 New-Item -ItemType Directory -Path $ndir -Force | Out-Null
 $icon = Join-Path $ndir 'mycode-toast-icon.png'

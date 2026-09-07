@@ -9,6 +9,7 @@ set "OMO_DISABLE_POSTHOG=1"
 rem The compiled binary runs without this wrapper by default; keep models catalog local-only
 set "OPENCODE_DISABLE_MODELS_FETCH=1"
 set "RETRY=0"
+set "EXTRA="
 set "EXE=%SCRIPT_DIR%packages\opencode\dist\opencode-windows-x64\bin\mycode.exe"
 if not exist "%EXE%" (
     echo mycode.exe not found: %EXE%
@@ -17,7 +18,7 @@ if not exist "%EXE%" (
 )
 :run
 rem Capture stderr so Bun crash stacks land in a file instead of vanishing with the console
-"%EXE%" %* 2>>"%USERPROFILE%\.cache\mycode\stderr.log"
+"%EXE%" %EXTRA% %* 2>>"%USERPROFILE%\.cache\mycode\stderr.log"
 set "EC=%ERRORLEVEL%"
 rem The EDR network hook races with bun startup inside the binary too (0xC0000005); retrying boots fine
 if %EC%==-1073741819 goto segv
@@ -26,6 +27,8 @@ goto done
 :segv
 if %RETRY% GEQ 2 goto done
 set /a RETRY+=1
+rem Reopen the last session on TUI recovery; skip for subcommand runs to avoid argument conflicts
+if "%~1"=="" set "EXTRA=--continue"
 timeout /t 1 /nobreak >nul
 goto run
 :done

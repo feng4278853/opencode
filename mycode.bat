@@ -8,10 +8,11 @@ set "OMO_SEND_ANONYMOUS_TELEMETRY=0"
 set "OMO_DISABLE_POSTHOG=1"
 set "OPENCODE_DISABLE_MODELS_FETCH=1"
 set "RETRY=0"
+set "EXTRA="
 pushd "%SCRIPT_DIR%packages\opencode"
 :run
 rem Capture stderr so Bun crash stacks land in a file instead of vanishing with the console
-"%SCRIPT_DIR%bun.exe" "src\index.ts" %* 2>>"%USERPROFILE%\.cache\mycode\stderr.log"
+"%SCRIPT_DIR%bun.exe" "src\index.ts" %EXTRA% %* 2>>"%USERPROFILE%\.cache\mycode\stderr.log"
 set "EC=%ERRORLEVEL%"
 rem The EDR network hook races with bun startup and occasionally segfaults (0xC0000005 = -1073741819); a retry boots fine
 if %EC%==-1073741819 goto segv
@@ -20,6 +21,8 @@ goto done
 :segv
 if %RETRY% GEQ 2 goto done
 set /a RETRY+=1
+rem Reopen the last session on TUI recovery; skip for subcommand runs to avoid argument conflicts
+if "%~1"=="" set "EXTRA=--continue"
 timeout /t 1 /nobreak >nul
 goto run
 :done

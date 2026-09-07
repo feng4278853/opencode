@@ -10,7 +10,8 @@ set "OPENCODE_DISABLE_MODELS_FETCH=1"
 set "RETRY=0"
 pushd "%SCRIPT_DIR%packages\opencode"
 :run
-"%SCRIPT_DIR%bun.exe" "src\index.ts" %*
+rem Capture stderr so Bun crash stacks land in a file instead of vanishing with the console
+"%SCRIPT_DIR%bun.exe" "src\index.ts" %* 2>>"%USERPROFILE%\.cache\mycode\stderr.log"
 set "EC=%ERRORLEVEL%"
 rem The EDR network hook races with bun startup and occasionally segfaults (0xC0000005 = -1073741819); a retry boots fine
 if %EC%==-1073741819 goto segv

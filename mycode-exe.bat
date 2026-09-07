@@ -16,7 +16,8 @@ if not exist "%EXE%" (
     exit /b 1
 )
 :run
-"%EXE%" %*
+rem Capture stderr so Bun crash stacks land in a file instead of vanishing with the console
+"%EXE%" %* 2>>"%USERPROFILE%\.cache\mycode\stderr.log"
 set "EC=%ERRORLEVEL%"
 rem The EDR network hook races with bun startup inside the binary too (0xC0000005); retrying boots fine
 if %EC%==-1073741819 goto segv

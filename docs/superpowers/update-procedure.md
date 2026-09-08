@@ -504,6 +504,15 @@ $dst = (Get-FileHash "F:\Git\my-open-code\opencode\bun.exe" -Algorithm SHA256).H
 Write-Output "一致: $($src -eq $dst)"
 ```
 
+### 2026-09-08：bun 1.3.14 → 1.4.2 解决 EDR 竞态崩溃
+
+联软 MozartBreath hook 与 bun 1.3.14 的子进程派生存在竞态缺陷：源码模式（启动期 + 运行期）和编译版 exe 都会随机段错误，崩溃堆栈 8 帧中 7 帧为 `CoBMozartBreathCore/Soft.dll`。**升级到 bun 1.4.2 后 spawn 实现改变，竞态消失**（升级后首个完整工作日零崩溃验证）。
+
+- 升级步骤：`cd D:\npm-tools\bun && npm install bun@latest`，再执行上面的同步命令
+- 编译版 exe 需用新版 bun 重新构建才会换内核（源码模式立即生效）
+- 崩溃现场自动落盘于 `~/.cache/mycode/stderr.log`（wrapper 的 stderr 捕获），排查时先看这个文件
+- 同事机器遇偶发崩溃：按本节流程升级 bun 即可
+
 > **注意**：EDR 基于**进程名 `bun.exe`** 判断是否为已知安全应用。Bun 升级但进程名仍为 `bun.exe` 时 EDR 仍然容忍；若 Bun 改名（如 `bun-runtime.exe`）需重新评估 EDR 兼容性。**切勿**让 `mycode.bat` 调用其他名字的 exe。
 
 ---

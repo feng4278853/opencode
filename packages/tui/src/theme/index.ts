@@ -7,7 +7,7 @@ import {
 } from "@opencode/theme/tui"
 import { resolveThemeColors } from "./resolve"
 import { DEFAULT_THEMES, type Theme, type ThemeV1Json } from "./v1"
-import opencode from "./assets/v2/opencode.json" with { type: "json" }
+import opencode from "./assets/v2/mycode.json" with { type: "json" }
 import opencode2 from "./assets/v2/opencode2.json" with { type: "json" }
 
 export { DEFAULT_THEMES, type Theme, type ThemeV1Json } from "./v1"
@@ -48,7 +48,7 @@ function listThemes(): Record<string, ThemeDocumentSource> {
   }
   return {
     ...themes,
-    system: systemTheme ?? themes.system ?? themes.opencode,
+    system: systemTheme ?? themes.system ?? themes.mycode,
   }
 }
 

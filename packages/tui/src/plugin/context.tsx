@@ -324,7 +324,13 @@ export function PluginProvider(props: ParentProps<{ packages: PackageSource; dir
       }
 
       const selected = [...desired.values()].filter((item) => matches(target, item.plugin.id))
-      if (selected.length || target === "*" || target.endsWith(".*") || target.startsWith("opencode.")) {
+      if (
+        selected.length ||
+        target === "*" ||
+        target.endsWith(".*") ||
+        target.startsWith("mycode.") ||
+        target.startsWith("opencode.")
+      ) {
         for (const item of selected) item.enabled = true
         continue
       }

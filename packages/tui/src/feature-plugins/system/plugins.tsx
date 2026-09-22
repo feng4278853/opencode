@@ -9,7 +9,7 @@ import { DialogSelect, type DialogSelectOption } from "../../ui/dialog-select"
 import { useDialog } from "../../ui/dialog"
 import { errorMessage } from "../../util/error"
 
-const id = "opencode.plugins"
+const id = "mycode.plugins"
 
 type Entry =
   | { readonly key: string; readonly runtime: "server"; readonly internal: boolean; readonly plugin: PluginInfo }

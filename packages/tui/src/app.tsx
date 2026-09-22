@@ -338,7 +338,7 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
                                   initialRoute: process.env.OPENCODE_STORY
                                     ? {
                                         type: "plugin",
-                                        id: "opencode.storybook",
+                                        id: "mycode.storybook",
                                         name: "storybook",
                                         // OPENCODE_STORY=1 opens the index; any other value opens that story.
                                         data:
@@ -398,7 +398,16 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
                                                                                 packages={input.packages}
                                                                                 directories={pluginDirectories}
                                                                               >
-                                                                                <App />
+                                                                                <App
+                                                                                  pair={
+                                                                                    input.server.endpoint.auth
+                                                                                      ? input.server.endpoint.auth
+                                                                                      : {
+                                                                                          username: "mycode",
+                                                                                          password: "",
+                                                                                        }
+                                                                                  }
+                                                                                />
                                                                               </PluginProvider>
                                                                             </PanelProvider>
                                                                           </UpdateNotificationProvider>
@@ -602,23 +611,23 @@ function App() {
     if (!terminalTitleEnabled()) return
 
     if (route.data.type === "home") {
-      renderer.setTerminalTitle("OpenCode")
+      renderer.setTerminalTitle("mycode-v2")
       return
     }
 
     if (route.data.type === "session") {
       const title = session?.title
       if (!title || isFallbackTitle(title)) {
-        renderer.setTerminalTitle("OpenCode")
+        renderer.setTerminalTitle("mycode-v2")
         return
       }
 
-      renderer.setTerminalTitle(`OC | ${title.length > 40 ? title.slice(0, 37) + "…" : title}`)
+      renderer.setTerminalTitle(`mycode-v2 | ${title.length > 40 ? title.slice(0, 37) + "…" : title}`)
       return
     }
 
     if (route.data.type === "plugin") {
-      renderer.setTerminalTitle(`OC | ${route.data.name}`)
+      renderer.setTerminalTitle(`mycode-v2 | ${route.data.name}`)
     }
   })
 
@@ -980,7 +989,8 @@ function App() {
         ? [
             {
               name: "opencode.update",
-              title: "Update OpenCode",
+              title: "Update mycode-v2",
+              description: "Update mycode-v2 (upgrade)",
               slash: { name: "update" },
               run: () => updater.open?.("manual"),
               category: "System",
@@ -1086,7 +1096,7 @@ function App() {
         name: "docs.open",
         title: "Open docs",
         run: () => {
-          openUrl("https://opencode.ai/docs").catch(() => {})
+          open("https://github.com/feng4278853/opencode").catch(() => {})
           dialog.clear()
         },
         category: "System",
@@ -1386,7 +1396,7 @@ function App() {
           <PaneResizeHandle resize={tabsResize} left={tabsResize.size() - 1} />
         </Show>
       </box>
-      <Show when={devtools() && !(route.data.type === "plugin" && route.data.id === "opencode.stats")}>
+      <Show when={devtools() && !(route.data.type === "plugin" && route.data.id === "mycode.stats")}>
         <DevToolsBar />
       </Show>
       <Show when={!startup.skipInitialLoading}>

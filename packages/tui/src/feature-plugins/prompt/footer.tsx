@@ -117,7 +117,7 @@ export function PromptFooter(props: {
 }
 
 export default Plugin.define({
-  id: "opencode.prompt.footer",
+  id: "mycode.prompt.footer",
   setup(context) {
     context.ui.slot({
       append: "prompt.footer",

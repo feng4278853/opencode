@@ -38,21 +38,35 @@ export default Plugin.define({
         return
       }
       const session = context.data.session.get(sessionID)
-      notify(context, sessionID, "Session done", session?.parentID ? "subagent_done" : "done")
+      notify(context, sessionID, "✅ Session done", session?.parentID ? "subagent_done" : "done")
     }
 
     const dispose = [
       context.data.on("form.created", (event) => {
         if (forms.has(event.data.form.id)) return
         forms.add(event.data.form.id)
-        notify(context, event.data.form.sessionID, "Input needs response", "question", event.data.form.title)
+        const label = event.data.form.title || event.data.form.fields?.[0]?.title || ""
+        notify(
+          context,
+          event.data.form.sessionID,
+          label ? `❓ Question: ${label}` : "❓ Question needs input",
+          "question",
+        )
       }),
       context.data.on("form.replied", (event) => forms.delete(event.data.id)),
       context.data.on("form.cancelled", (event) => forms.delete(event.data.id)),
       context.data.on("permission.asked", (event) => {
         if (permissions.has(event.data.id)) return
         permissions.add(event.data.id)
-        notify(context, event.data.sessionID, "Permission needs input", "permission")
+        const detail = event.data.resources.filter((item) => typeof item === "string" && item.trim()).join(" ")
+        notify(
+          context,
+          event.data.sessionID,
+          detail
+            ? `🔑 Permission: ${event.data.action} — ${detail}`
+            : `🔑 Permission: ${event.data.action}`,
+          "permission",
+        )
       }),
       context.data.on("permission.replied", (event) => permissions.delete(event.data.requestID)),
       context.data.on("session.execution.started", (event) => started(event.data.sessionID)),
@@ -66,8 +80,13 @@ export default Plugin.define({
           return
         }
         errored.add(sessionID)
-        notify(context, sessionID, event.data.error.message, "error")
-        context.ui.toast.show({ sessionID, title: "Session failed", message: event.data.error.message, variant: "error" })
+        notify(context, sessionID, `⚠️ Session error: ${event.data.error.message}`, "error")
+        context.ui.toast.show({
+          sessionID,
+          title: "Session failed",
+          message: event.data.error.message,
+          variant: "error",
+        })
         ended(sessionID)
       }),
     ]

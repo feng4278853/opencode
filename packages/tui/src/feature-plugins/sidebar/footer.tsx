@@ -114,7 +114,7 @@ function SidebarFooter(props: { context: Plugin.Context; sessionID: string }) {
 }
 
 export default Plugin.define({
-  id: "opencode.sidebar.footer",
+  id: "mycode.sidebar.footer",
   setup(context) {
     // Append keeps the path open to additive plugin claims; an external
     // replace still takes the boundary over.

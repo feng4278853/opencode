@@ -85,7 +85,7 @@ export function DialogUpdate(props: {
         <DialogHeader
           title={
             state().type === "installing"
-              ? "Updating OpenCode"
+              ? "Updating mycode-v2"
               : state().type === "available" || state().type === "failed"
                 ? "Update available"
                 : "Update"

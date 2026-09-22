@@ -32,7 +32,7 @@ function hasRunningChild(context: Plugin.Context, sessionID: string) {
 }
 
 export default Plugin.define({
-  id: "opencode.notifications",
+  id: "mycode.notifications",
   setup(context) {
     const errored = new Set<string>()
     const terminal = new Set<string>()

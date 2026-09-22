@@ -227,6 +227,15 @@ const make = Effect.gen(function* () {
   }
 
   const release = Effect.fnUntraced(function* (method?: Method) {
+    // Privatized build: never contact the upstream update service.
+    if (true)
+      return yield* Effect.fail(
+        new UpgradeError({
+          title: "Updates are disabled in this build",
+          detail: "This mycode build does not check for upstream releases.",
+          retry: "Update via git rebase instead. See docs/superpowers/update-procedure.md.",
+        }),
+      )
     const distribution = method === "brew" ? "homebrew" : "npm"
     const response = yield* Effect.tryPromise({
       try: (signal) =>
@@ -274,7 +283,8 @@ const make = Effect.gen(function* () {
           retry: "Try again in a few minutes.",
         }),
       )
-    return { package: data.metadata.package, version: data.version }
+    // Unreachable in the privatized build (release always fails above); kept for type-checking.
+    return { package: data.metadata!.package!, version: data.version }
   })
 
   const latest = () =>

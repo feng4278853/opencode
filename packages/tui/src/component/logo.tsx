@@ -10,7 +10,7 @@ export function Logo() {
   const name = dimensions().width < 22 ? "mycode" : "mycode-v2"
 
   return (
-    <box>
+    <box alignItems="center">
       <text fg={theme.text.base} attributes={TextAttributes.BOLD} selectable={false}>
         {name}
       </text>

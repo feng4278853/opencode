@@ -1361,7 +1361,7 @@ function Commands(props: { context: Plugin.Context }) {
 }
 
 export default Plugin.define({
-  id: "opencode.diffs",
+  id: "mycode.diffs",
   setup(context) {
     context.ui.slot({
       append: "session.panel",

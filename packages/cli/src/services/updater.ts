@@ -1,13 +1,11 @@
 import { Global } from "@opencode/util/global"
 import { AppProcess } from "@opencode/util/process"
-import { EffectFlock } from "@opencode/util/effect-flock"
 import { OPENCODE_ARTIFACT, OPENCODE_CHANNEL, OPENCODE_LOCAL, OPENCODE_VERSION } from "../version"
 import { Context, Duration, Effect, FileSystem, Layer, Option, Ref, Schema } from "effect"
-import { ChildProcess } from "effect/process"
+import { ChildProcess } from "effect/unstable/process"
 import { parse, type ParseError } from "jsonc-parser"
 import path from "node:path"
 import { stripVTControlCharacters } from "node:util"
-import { RetainedImage } from "./retained-image"
 import { action, parseReleaseVersion, type Policy } from "./updater-action"
 import { errorMessage } from "../util/error"
 
@@ -110,7 +108,7 @@ export interface Interface {
   readonly check: () => Effect.Effect<CheckResult | undefined, Error>
   readonly apply: (version: string) => Effect.Effect<void, Error>
   readonly method: () => Effect.Effect<Method | undefined>
-  readonly latest: (method?: Method) => Effect.Effect<string, Error>
+  readonly latest: () => Effect.Effect<string, Error>
   readonly upgrade: (method: Method, version: string) => Effect.Effect<void, Error>
   readonly removal: (
     method: Method,
@@ -140,11 +138,10 @@ const make = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem
   const global = yield* Global.Service
   const appProcess = yield* AppProcess.Service
-  const flock = yield* EffectFlock.Service
   const installedVersion = yield* Ref.make(OPENCODE_VERSION)
   const channel = OPENCODE_CHANNEL.replace(/[^a-zA-Z0-9._-]/g, "-")
-  const executable = yield* fs.realPath(process.execPath).pipe(Effect.orElseSucceed(() => process.execPath))
   const installedPackage = yield* Effect.gen(function* () {
+    const executable = yield* fs.realPath(process.execPath)
     const directory = path.dirname(path.dirname(executable))
     const manifest: { name: string; bin?: Record<string, string> } = yield* fs
       .readFileString(path.join(directory, "package.json"))
@@ -262,26 +259,27 @@ const make = Effect.gen(function* () {
     if (!command) return undefined
     return {
       command,
-      run: retaining(
-        method,
-        exec(command, "5 minutes").pipe(
-          Effect.flatMap((result) => (result.code === 0 ? Effect.void : Effect.fail(new Error(resultDetail(result))))),
-        ),
-        global.tmp,
+      run: exec(command, "5 minutes").pipe(
+        Effect.flatMap((result) => (result.code === 0 ? Effect.void : Effect.fail(new Error(resultDetail(result))))),
       ),
     }
   }
 
   const release = Effect.fnUntraced(function* (method?: Method) {
+    // Privatized build: never contact the upstream update service.
+    if (true)
+      return yield* Effect.fail(
+        new UpgradeError({
+          title: "Updates are disabled in this build",
+          detail: "This mycode build does not check for upstream releases.",
+          retry: "Update via git rebase instead. See docs/superpowers/update-procedure.md.",
+        }),
+      )
     const distribution = method === "brew" ? "homebrew" : "npm"
-    // Homebrew Core builds its formula on its own schedule, so the tap release does not describe it.
-    const core = method === "brew" && installedFormula === "opencode"
     const response = yield* Effect.tryPromise({
       try: (signal) =>
         fetch(
-          core
-            ? "https://formulae.brew.sh/api/formula/opencode.json"
-            : `https://opencode.ai/update/api/${encodeURIComponent(channel)}/${encodeURIComponent(OPENCODE_ARTIFACT)}/${distribution}?current=${encodeURIComponent(OPENCODE_VERSION)}`,
+          `https://opencode.ai/update/api/${encodeURIComponent(channel)}/${encodeURIComponent(OPENCODE_ARTIFACT)}/${distribution}?current=${encodeURIComponent(OPENCODE_VERSION)}`,
           {
             signal: AbortSignal.any([signal, AbortSignal.timeout(10_000)]),
           },
@@ -304,22 +302,19 @@ const make = Effect.gen(function* () {
           retry: "Try again in a few minutes.",
         }),
       )
-    const data: { version?: string; metadata?: { package?: string }; versions?: { stable?: string } } =
-      yield* Effect.tryPromise({
-        try: () => response.json(),
-        catch: (cause) =>
-          new UpgradeError(
-            {
-              title: "Could not read the OpenCode update information",
-              detail: errorDetail(cause),
-              retry: "Try again in a few minutes.",
-            },
-            { cause },
-          ),
-      })
-    const version = core ? data.versions?.stable : data.version
-    const packageName = core ? "opencode" : data.metadata?.package
-    if (!version || !packageName)
+    const data: { version: string; metadata?: { package?: string } } = yield* Effect.tryPromise({
+      try: () => response.json(),
+      catch: (cause) =>
+        new UpgradeError(
+          {
+            title: "Could not read the OpenCode update information",
+            detail: errorDetail(cause),
+            retry: "Try again in a few minutes.",
+          },
+          { cause },
+        ),
+    })
+    if (!data.metadata?.package)
       return yield* Effect.fail(
         new UpgradeError({
           title: "Could not read the OpenCode update information",
@@ -327,7 +322,8 @@ const make = Effect.gen(function* () {
           retry: "Try again in a few minutes.",
         }),
       )
-    return { package: packageName, version }
+    // Unreachable in the privatized build (release always fails above); kept for type-checking.
+    return { package: data.metadata!.package!, version: data.version }
   })
 
   // WinGet moderates every submission, so only its own index knows which release it can install.
@@ -456,24 +452,17 @@ const make = Effect.gen(function* () {
     }
     yield* Effect.scoped(
       Effect.gen(function* () {
-        // Other OpenCode processes may be installing at the same time. Wait longer than the
-        // slowest install (curl runs two 5-minute commands).
-        yield* flock.acquire("cli-upgrade", undefined, { timeoutMs: Duration.toMillis("15 minutes") })
         if (method === "bun") {
           // Bun does not prune old versions from its shared package cache.
           yield* fs.makeDirectory(global.cache, { recursive: true })
           const cache = yield* temporaryDirectory("update-")
-          return yield* retaining(
+          return yield* runUpgrade({
             method,
-            runUpgrade({
-              method,
-              command: ["bun", "install", "--global", "--trust", "--cache-dir", cache, target],
-              displayCommand: ["bun", "install", "--global", "--trust", target],
-            }),
-          )
+            command: ["bun", "install", "--global", "--trust", "--cache-dir", cache, target],
+            displayCommand: ["bun", "install", "--global", "--trust", target],
+          })
         }
         if (method === "curl") {
-          const bash = yield* installerBash()
           yield* fs.makeDirectory(global.cache, { recursive: true })
           const directory = yield* temporaryDirectory("update-")
           const installer = path.join(directory, "install")
@@ -484,15 +473,12 @@ const make = Effect.gen(function* () {
             title: "Could not download the OpenCode installer",
             retry: "Check your network, then run opencode upgrade again.",
           })
-          return yield* retaining(
+          return yield* runUpgrade({
             method,
-            runUpgrade({
-              method,
-              command: [bash, installer, "--version", version, "--no-modify-path"],
-              displayCommand: ["opencode", "upgrade", version, "--method", "curl"],
-              title: "The OpenCode installer failed",
-            }),
-          )
+            command: ["bash", installer, "--version", version, "--no-modify-path"],
+            displayCommand: ["opencode", "upgrade", version, "--method", "curl"],
+            title: "The OpenCode installer failed",
+          })
         }
         if (method === "brew") return yield* runUpgrade({ method, command: ["brew", "upgrade", packageName] })
         if (method === "winget")

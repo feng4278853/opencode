@@ -67,9 +67,9 @@ export function SidebarContext(props: { context: Plugin.Context; sessionID: stri
           <text fg={theme.text.muted}>
             hit (cum): {hit().cumHit}% · hit (last): {hit().last}%
           </text>
-          <text>
+          <box flexDirection="row">
             <For each={hit().history}>{(rate) => <text fg={sparkColor(rate)}>█</text>}</For>
-          </text>
+          </box>
         </Show>
         <Show when={cost() > 0}>
           <text fg={theme.text.muted}>{money.format(cost())} spent</text>

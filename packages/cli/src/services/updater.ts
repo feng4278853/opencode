@@ -313,6 +313,16 @@ const make = Effect.gen(function* () {
   }
 
   const release = Effect.fnUntraced(function* (method?: Method) {
+    // Privatized build: never contact the upstream update service.
+    // Env guard keeps TypeScript from collapsing the success branch to never.
+    if (process.env.MYCODE_DISABLE_UPDATE !== "0")
+      return yield* Effect.fail(
+        new UpgradeError({
+          title: "Updates are disabled in this build",
+          detail: "This mycode build does not check for upstream releases.",
+          retry: "Update via git rebase instead. See docs/superpowers/update-procedure.md.",
+        }),
+      )
     const distribution = method === "brew" ? "homebrew" : "npm"
     // Homebrew Core builds its formula on its own schedule, so the tap release does not describe it.
     const core = method === "brew" && installedFormula === "opencode"

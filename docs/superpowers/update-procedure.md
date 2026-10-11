@@ -10,9 +10,21 @@ v1（1.18.x 架构）的升级流程在 `../../opencode/docs/superpowers/update-
 |---|---|
 | 仓库 | `F:\Git\my-open-code\opencode-v2`，分支 `my-opencode-v2` |
 | remote | `origin` = feng4278853/opencode（fork）、`upstream` = anomalyco/opencode |
-| 基线 | v2.0.12（上游 commit `9d531435b4` 附近） |
-| 私有化提交（7 个，见 `git log --oneline 9d531435b4..HEAD`） | ① 主体改造（改名/云摘除/更新禁用）② 构建验证+wrapper ③ sparkline+弹窗移植 ④⑤⑥ TUI 品牌化+sparkline 渲染修复+wordmark |
+| 基线 | **v2.0.12**（上游 `v2` 分支 commit `9d531435b4`，2026-09-22，`fix(desktop): stop signing macOS DMGs`） |
+| 私有化提交（9 个，见 `git log --oneline 9d531435b4..HEAD`） | ① 主体改造（改名/云摘除/更新禁用）② 构建验证+wrapper ③ sparkline+弹窗移植 ④⑤⑥ TUI 品牌化+sparkline 渲染修复+wordmark ⑦ 升级文档 ⑧ pre-push check 裁剪 |
 | runtime | **bun 1.4.2**（v2 上游要求 1.4.x，勿降级） |
+
+## ⚠️ 官方 v2 的版本渠道（2026-10-11 查证，升级前先复核）
+
+**上游 v2 的开发主线是专门的 `v2` 分支（`refs/heads/v2`），不是 `dev`！** `dev` 分支仍承载 v1（1.18.x/1.19.x），GitHub Releases 页面发布的也全是 v1 版本号——**不要**用 v1 的 release/tag 渠道判断 v2 的更新。
+
+| 渠道 | 现状（查证时点） | 用途 |
+|---|---|---|
+| `upstream` 的 **`v2` 分支** | `4617210822`（2026-10-01+） | **升级目标首选**：最新最全 |
+| npm `@opencode-ai/cli` 的 `beta` tag | `0.0.0-beta-19271`（2026-09-07） | 发布滞后于分支（分支 10 月初已到 v2.0.21，beta tag 停在 9/7），只作参考 |
+| GitHub Releases | 全是 v1 版本号 | **与 v2 无关，忽略** |
+
+基线之后官方 v2 的增量（截至 2026-10-11，约 10 天）：**发布 v2.0.21**；ACP 协议重构（Zed 集成，不用 Zed 无感）；插件 API 扩展（父会话创建、compaction/会话删除暴露）；provider 错误分类完善（**含 Z.ai 错误分类，与 GLM 同源相关**）；MCP 错误自描述；models.dev 快照刷新。无破坏性变更。
 
 ## v2 与 v1 的结构差异（升级时最容易踩的认知坑）
 
@@ -38,30 +50,38 @@ v1（1.18.x 架构）的升级流程在 `../../opencode/docs/superpowers/update-
 git tag backup-v2-$(Get-Date -Format "yyyyMMdd"); git push origin backup-v2-$(Get-Date -Format "yyyyMMdd")
 ```
 
-### Step 2：拉取上游
+### Step 2：拉取上游 v2 分支
 
 ```powershell
-git fetch upstream --tags   # 网络不通先开 dev-sidecar（系统代理 127.0.0.1:31181）
+# 网络不通先开 dev-sidecar（系统代理 127.0.0.1:31181）
+# 只拉 v2 分支（dev 是 v1，tags 是 v1 release，都与我们无关）。
+# 大仓库 fetch 易中断（early EOF / invalid index-pack / 代理 500），多试几次或换网络。
+git fetch upstream v2
+# 备用：先 ls-remote 拿分支头 hash，确认网络可达
+git ls-remote upstream refs/heads/v2
 ```
 
-目标选**最新 v2 release tag**（`git tag -l --sort=-v:refname "v2.*" | head -5`），不追 dev 裸顶端。
+**升级目标 = upstream `v2` 分支顶端**（`upstream/v2`）。不追 dev（那是 v1），不看 GitHub Releases（那是 v1）。npm beta tag 发布滞后于分支，仅供参考。
 
 ### Step 3：差距评估
 
 ```powershell
-git log --oneline 9d531435b4..v2.0.xx | Measure-Object -Line
+git log --oneline 9d531435b4..upstream/v2
+git rev-list --count 9d531435b4..upstream/v2   # 新提交数
 # 高危文件（私有化触碰过、上游也常改的）：
-git diff --stat 9d531435b4..v2.0.xx -- packages/util/src/global.ts packages/core/src/config/discovery.ts packages/cli/src/database-path.ts packages/core/src/plugin/provider.ts packages/core/src/plugin/internal.ts packages/core/src/models-dev.ts packages/cli/src/services/updater.ts packages/core/src/app.ts packages/tui/src/attention.ts packages/tui/src/feature-plugins/system/notifications.ts packages/tui/src/feature-plugins/sidebar/context.tsx packages/cli/script/build.ts packages/cli/src/commands/commands.ts
+git diff --stat 9d531435b4..upstream/v2 -- packages/util/src/global.ts packages/core/src/config/discovery.ts packages/cli/src/database-path.ts packages/core/src/plugin/provider.ts packages/core/src/plugin/internal.ts packages/core/src/models-dev.ts packages/cli/src/services/updater.ts packages/core/src/app.ts packages/tui/src/attention.ts packages/tui/src/feature-plugins/system/notifications.ts packages/tui/src/feature-plugins/sidebar/context.tsx packages/cli/script/build.ts packages/cli/src/commands/commands.ts
 # 上游新增 opencode 官方域（网络审计输入）：
-git diff 9d531435b4..v2.0.xx | Select-String "^\+.*(opencode\.ai|opncd\.ai)"
+git diff 9d531435b4..upstream/v2 | Select-String "^\+.*(opencode\.ai|opncd\.ai)"
+# 版本号变化（确认新版本号，写进基点记录）
+git show upstream/v2:packages/cli/package.json | Select-String '"version"'
 ```
 
 ### Step 4：rebase 或重放
 
-私有化提交少（7 个）且集中，两种方式任选：
+私有化提交少（9 个）且集中，两种方式任选：
 
-- **rebase**：`git rebase --onto v2.0.xx 9d531435b4 my-opencode-v2`（注意 rebase 中 ours=上游、theirs=自己）
-- **重放**：新建分支到新 tag，按下面 marker 清单逐项重做（v2 改动点集中，重放约 1-2 小时）
+- **rebase**：`git rebase --onto upstream/v2 9d531435b4 my-opencode-v2`（注意 rebase 中 ours=上游、theirs=自己）
+- **重放**：新建分支到 `upstream/v2`，按下面 marker 清单逐项重做（v2 改动点集中，重放约 1-2 小时）
 
 冲突处理原则：
 - `global.ts` / `app.ts` / `database-path.ts` / `discovery.ts`：保留 mycode 字样，合入上游新逻辑

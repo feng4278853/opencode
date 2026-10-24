@@ -267,7 +267,9 @@ const make = Effect.gen(function* () {
 
   const release = Effect.fnUntraced(function* (method?: Method) {
     // Privatized build: never contact the upstream update service.
-    if (true)
+    // Env guard so TypeScript keeps the original success types below
+    // (a literal `if (true)` collapses them to never and breaks downstream).
+    if (process.env.MYCODE_DISABLE_UPDATE !== "0")
       return yield* Effect.fail(
         new UpgradeError({
           title: "Updates are disabled in this build",

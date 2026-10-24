@@ -1096,7 +1096,7 @@ function App() {
         name: "docs.open",
         title: "Open docs",
         run: () => {
-          open("https://github.com/feng4278853/opencode").catch(() => {})
+          openUrl("https://github.com/feng4278853/opencode").catch(() => {})
           dialog.clear()
         },
         category: "System",

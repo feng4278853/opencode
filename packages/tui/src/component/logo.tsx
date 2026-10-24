@@ -1,5 +1,4 @@
 import { TextAttributes } from "@opentui/core"
-import { type JSX } from "solid-js"
 import { useTerminalDimensions } from "@opentui/solid"
 import { useTheme } from "../context/theme"
 

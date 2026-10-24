@@ -50,7 +50,7 @@ const Root = Spec.make(typeof OPENCODE_CLI_NAME === "string" ? OPENCODE_CLI_NAME
   params: {
     ...ServerParams,
     ...PermissionParams,
-    directory: Argument.string("directory").pipe(
+    directory: Argument.String("directory").pipe(
       Argument.withDescription("Directory to start mycode in"),
       Argument.optional,
     ),

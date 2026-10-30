@@ -10,8 +10,8 @@ v1（1.18.x 架构）的升级流程在 `../../opencode/docs/superpowers/update-
 |---|---|
 | 仓库 | `F:\Git\my-open-code\opencode-v2`，分支 `my-opencode-v2` |
 | remote | `origin` = feng4278853/opencode（fork）、`upstream` = anomalyco/opencode |
-| 基线 | **v2.0.26**（上游 `v2` 分支 commit `4617210822`，2026-10-01，于 2026-10-25 完成首次按本文档的 rebase 升级，719 个上游提交） |
-| 私有化提交（11 个，见 `git log --oneline 4617210822..HEAD`） | ① 主体改造（改名/云摘除/更新禁用）② 构建验证+wrapper ③ sparkline+弹窗移植 ④⑤⑥ TUI 品牌化+sparkline 渲染修复+wordmark ⑦ 升级文档 ⑧ pre-push check 裁剪 |
+| 基线 | **v2.2.2**（上游 tag `v2.2.2`，commit `098aa7fd6e`，于 2026-10-30 完成第二次 rebase 升级，2739 个上游提交；首次升级 2026-10-25 到 v2.0.26） |
+| 私有化提交（15 个，见 `git log --oneline 098aa7fd6e..HEAD`） | ① 主体改造（改名/云摘除/更新禁用）② 构建验证+wrapper ③ sparkline+弹窗移植 ④⑤⑥ TUI 品牌化+sparkline 渲染修复+wordmark ⑦ 升级文档 ⑧ pre-push check 裁剪 |
 | runtime | **bun 1.4.2**（v2 上游要求 1.4.x，勿降级） |
 
 ## ⚠️ 官方 v2 的版本渠道（2026-10-11 查证，升级前先复核）
@@ -66,12 +66,12 @@ git ls-remote upstream refs/heads/v2
 ### Step 3：差距评估
 
 ```powershell
-git log --oneline 4617210822..upstream/v2
-git rev-list --count 4617210822..upstream/v2   # 新提交数
+git log --oneline 098aa7fd6e..upstream/v2
+git rev-list --count 098aa7fd6e..upstream/v2   # 新提交数
 # 高危文件（私有化触碰过、上游也常改的）：
-git diff --stat 4617210822..upstream/v2 -- packages/util/src/global.ts packages/core/src/config/discovery.ts packages/cli/src/database-path.ts packages/core/src/plugin/provider.ts packages/core/src/plugin/internal.ts packages/core/src/models-dev.ts packages/cli/src/services/updater.ts packages/core/src/app.ts packages/tui/src/attention.ts packages/tui/src/feature-plugins/system/notifications.ts packages/tui/src/feature-plugins/sidebar/context.tsx packages/cli/script/build.ts packages/cli/src/commands/commands.ts
+git diff --stat 098aa7fd6e..upstream/v2 -- packages/util/src/global.ts packages/core/src/config/discovery.ts packages/cli/src/database-path.ts packages/core/src/plugin/provider.ts packages/core/src/plugin/internal.ts packages/core/src/models-dev.ts packages/cli/src/services/updater.ts packages/core/src/app.ts packages/tui/src/attention.ts packages/tui/src/feature-plugins/system/notifications.ts packages/tui/src/feature-plugins/sidebar/context.tsx packages/cli/script/build.ts packages/cli/src/commands/commands.ts
 # 上游新增 opencode 官方域（网络审计输入）：
-git diff 4617210822..upstream/v2 | Select-String "^\+.*(opencode\.ai|opncd\.ai)"
+git diff 098aa7fd6e..upstream/v2 | Select-String "^\+.*(opencode\.ai|opncd\.ai)"
 # 版本号变化（确认新版本号，写进基点记录）
 git show upstream/v2:packages/cli/package.json | Select-String '"version"'
 ```
@@ -80,7 +80,7 @@ git show upstream/v2:packages/cli/package.json | Select-String '"version"'
 
 私有化提交少（9 个）且集中，两种方式任选：
 
-- **rebase**：`git rebase --onto upstream/v2 4617210822 my-opencode-v2`（注意 rebase 中 ours=上游、theirs=自己）
+- **rebase**：`git rebase --onto upstream/v2 098aa7fd6e my-opencode-v2`（注意 rebase 中 ours=上游、theirs=自己）
 - **重放**：新建分支到 `upstream/v2`，按下面 marker 清单逐项重做（v2 改动点集中，重放约 1-2 小时）
 
 冲突处理原则：
@@ -204,6 +204,23 @@ rtk git grep -nE "models\.opencode\.ai|console\.opencode\.ai" -- packages/core/s
 - 入口：`mycode-v2.bat`（勿直接跑 exe——模型禁拉、段错误重试、stderr 捕获都在 wrapper 里）
 - 点击弹窗聚焦依赖 `mycode://` 协议 + `~/.cache/mycode/notify/` 产物——首次弹窗自动生成/注册，无需配置
 - **共享目录说明**：v1（源码模式，DB=`mycode-local.db`）与 v2（exe，DB=`mycode.db`）共用 `~/.config|local|cache/mycode` 但数据库天然错开；**不要**让两边交换运行模式（v2 别用源码跑、v1 别编译成 latest channel），否则 DB 迁移可能互相污染
+
+## 2026-10-30 升级到 v2.2.2 的新增经验（第二轮升级踩的坑）
+
+1. **升级目标必须用 tag，不能用分支引用**：代理会缓存 `ls-remote` 的分支响应——本次拿到的是 10 月 1 日的旧 `v2` 分支头，误以为"官方没更新"，而实际官方已到 v2.2.2。**正确做法**：`git ls-remote --tags upstream | grep "refs/tags/v2\."` 取最新 tag，再用 tag 对象做 hash 校验（`git rev-parse v2.2.2` 必须等于官方 ls-remote 的值）。
+2. **必须先升级 bun 到 1.4.4**：v2.2.2 的 typecheck 改用 `bun check --no-script -b`（bun 内置 TS 检查器），bun 1.4.2 没有该命令。升级：`cd D:
+pm-toolsun && npm install bun@latest`，再把 bun.exe 复制到两个仓库根目录（v1/v2 各一份）。
+3. **`bun.exe` 绝不能进 git**：110MB 超过 GitHub 100MB 硬限制，会被 pre-receive 拒绝（`GH001: Large files detected`）。v2 仓库的 .gitignore 原本没有这条，补 `/bun.exe`。若已误提交，用 `git filter-branch -f --index-filter "git rm --cached --ignore-unmatch bun.exe" <commit>^..HEAD` 从历史里抹掉（注意：仅从最新提交移除索引不够，历史里的 blob 仍会被推送并被拒）。
+4. **install 前先恢复上游三件套**：rebase 后 bun.lock/package.json/bunfig.toml 可能是新旧拼接产物，`--frozen-lockfile` 会报 "lockfile had changes, but lockfile is frozen"。做法：`git checkout v2.2.2 -- bun.lock package.json bunfig.toml`，再重放私有化修改（package.json 的 check 裁剪、bunfig 的 minimumReleaseAge 注释），然后 `bun install --ignore-scripts --frozen-lockfile`。
+5. **rebase 冲突处理要点（v2.2.2 的 API 变化）**：
+   - `updater.ts`：`release()` 短路用**环境变量守卫**（`process.env.MYCODE_DISABLE_UPDATE !== "0"`）而不是 `if (true)`——后者会让 TS 把成功分支折叠成 never，下游十几处类型报错。先 `git checkout v2.2.2 -- <file>` 取上游整版，再打 env 守卫补丁。
+   - `dialog-update.tsx`：上游整体重写成 DialogLayout 结构，取上游版再替换 "Updating OpenCode" 等文案。
+   - `theme/index.ts`：上游新增了第二个主题 `opencode2.json`，与我们的 `mycode.json` 并存保留两个导入。
+   - `theme.tsx`：`available()` 改名 `themeSources()`，`loadTheme` 多了 `newDesigns()` 参数，合并时用上游新结构 + our 键名。
+   - `app.tsx` / `runtime.lifecycle.ts`：`setTerminalTitle(renderer, ...)` 改成了带 renderer 参数的新签名，用上游签名 + our 文案。
+   - `presentation.ts`：上游新增 updatedVersion 行与 Session 行，取上游结构 + our 文案。
+   - `models-dev.ts`：取上游新结构后把 `defaultSource` 改回 `https://models.dev`。
+   - `notifications.ts`：上游新增了配额类错误（provider.free-limit / go-limit）不弹窗的抑制逻辑，与我们的 ⚠️ 前缀合并保留。
 
 ## 已知遗留（下次升级顺带检查）
 

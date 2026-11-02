@@ -10,9 +10,9 @@ v1（1.18.x 架构）的升级流程在 `../../opencode/docs/superpowers/update-
 |---|---|
 | 仓库 | `F:\Git\my-open-code\opencode-v2`，分支 `my-opencode-v2` |
 | remote | `origin` = feng4278853/opencode（fork）、`upstream` = anomalyco/opencode |
-| 基线 | **v2.2.2**（上游 tag `v2.2.2`，commit `098aa7fd6e`，于 2026-10-30 完成第二次 rebase 升级，2739 个上游提交；首次升级 2026-10-25 到 v2.0.26） |
-| 私有化提交（15 个，见 `git log --oneline 098aa7fd6e..HEAD`） | ① 主体改造（改名/云摘除/更新禁用）② 构建验证+wrapper ③ sparkline+弹窗移植 ④⑤⑥ TUI 品牌化+sparkline 渲染修复+wordmark ⑦ 升级文档 ⑧ pre-push check 裁剪 |
-| runtime | **bun 1.4.2**（v2 上游要求 1.4.x，勿降级） |
+| 基线 | **v2.2.5**（上游 tag `v2.2.5`，commit `9bbb8ce18c`，于 2026-11-02 完成第三次 rebase 升级；此前 2026-10-30 到 v2.2.2，2026-10-25 到 v2.0.26） |
+| 私有化提交（18 个，见 `git log --oneline v2.2.5..HEAD`） | ① 主体改造（改名/云摘除/更新禁用）② 构建验证+wrapper ③ sparkline+弹窗移植 ④⑤⑥ TUI 品牌化+sparkline 渲染修复+wordmark ⑦⑧ 升级文档+pre-push 裁剪 ⑨⑩⑪ PWA/图标/标题品牌化 ⑫ bun.exe gitignore ⑬ 文档基点 |
+| runtime | **bun 1.4.4**（v2 上游要求 1.4.x；typecheck 用 `bun check --no-script -b` 需 ≥1.4.4，勿降级） |
 
 ## ⚠️ 官方 v2 的版本渠道（2026-10-11 查证，升级前先复核）
 
@@ -204,6 +204,15 @@ rtk git grep -nE "models\.opencode\.ai|console\.opencode\.ai" -- packages/core/s
 - 入口：`mycode-v2.bat`（勿直接跑 exe——模型禁拉、段错误重试、stderr 捕获都在 wrapper 里）
 - 点击弹窗聚焦依赖 `mycode://` 协议 + `~/.cache/mycode/notify/` 产物——首次弹窗自动生成/注册，无需配置
 - **共享目录说明**：v1（源码模式，DB=`mycode-local.db`）与 v2（exe，DB=`mycode.db`）共用 `~/.config|local|cache/mycode` 但数据库天然错开；**不要**让两边交换运行模式（v2 别用源码跑、v1 别编译成 latest channel），否则 DB 迁移可能互相污染
+
+## 2026-11-02 升级到 v2.2.5 的新增经验（第三轮）
+
+1. **上游新增 usage-limits/console-access（新的官方域消费方）**：v2.2.5 引入 `core/src/usage-limits.ts` + `console-access.ts`（`defaultServer = "https://opencode.ai/console"`，查 Console 工作区用量），TUI 侧栏/dialog-model 都接了。**判定不可达，无需摘除**：`UsageLimits.get` 先查 `integrations.connection.active("opencode")`，无 opencode 云凭证直接 `return undefined`；而凭证的**唯一来源**（云登录方法注册）在 `plugin/provider/opencode.ts`——该文件私有化时已删。后续升级遇到"新消费方 + 老凭证源"模式，用同一招判定：**追凭证链是否断供**，而不是删新消费方。
+2. **上游新增官方域均为字符串字面量**：`"$schema": "https://opencode.ai/config.json"`（JSON Schema `$id` 标识符）、theme tool 文档链接、`plugin/skill/opencode.md` 文档——无运行时可达路径，保留即可。
+3. **`.zcode/` 工作目录会混入 git**：zcode 桌面把 plan 文件写进仓库 `.zcode/plans/`，曾意外被 staged 进 rebase 提交。已在 .gitignore 加 `/.zcode/`；rebase 时若 status 出现 `A .zcode/...` 先 `git restore --staged`。
+4. **EDR 运行期网络挂起（偶发）**：wrapper 启动 run 后卡在模型请求发出（stderr 停在 `> build · glm-x`），进程**无任何 ESTABLISHED 连接**且 CPU 空转，十几分钟不超时。前台裸跑 exe 立即成功。判定：启动期段错误的姊妹形态（hook 挂住网络调用而非崩溃），裸跑复现正常即可放行，无需回滚升级。
+5. **bun.lock 冲突处理照旧**：两处冲突均 `git checkout --ours bun.lock`（rebase 中 ours=上游）取 v2.2.5 版，rebase 完成后它自然与上游零 diff，`bun install --frozen-lockfile` 一次通过（88 包，无空壳目录）。
+6. **内部插件数组迁移**：上游把 `DynamicProviderPlugin` 从 `plugin/provider.ts` 数组挪到 `internal.ts` 的 `post` 数组，并在 `internal.ts` 引入 `Artifact`/`ArtifactTools`/`ClaudeAgentPlugin`。冲突解法：**上游新插件全保留，只删 OpencodePlugin 的 import**（使用处早已删净，不会产生未使用 import）。
 
 ## 2026-10-30 升级到 v2.2.2 的新增经验（第二轮升级踩的坑）
 

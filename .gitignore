@@ -39,3 +39,6 @@ tsconfig.tsbuildinfo
 
 # bun runtime binary (110MB, exceeds GitHub file limit)
 /bun.exe
+
+# zcode desktop working dir (plan files must not enter git)
+/.zcode/

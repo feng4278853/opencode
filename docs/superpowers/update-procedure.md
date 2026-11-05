@@ -200,7 +200,7 @@ rtk git grep -nE "models\.opencode\.ai|console\.opencode\.ai" -- packages/core/s
 ## 运行时配置（每台机器）
 
 - `~/.config/mycode/cli.json`：`{ "attention": { "notifications": true, "sound": true, "volume": 0.4 } }`（弹窗+声音开关，v2 读 cli.json 不读 tui.json）
-- `~/.config/mycode/mycode.jsonc`：provider/插件（v1/v2 共用，v2 自动兼容 v1 格式）
+- `~/.config/mycode/mycode.jsonc`：provider/插件（v1/v2 共用，v2 自动兼容 v1 格式）；**agent 功能开关也在这里**——如待办列表：顶层加 `"experimental": { "todo": true }`（默认关；开启后 agent 有 `todowrite` 工具，TUI 侧栏显示待办面板）。注意 cli.json 是 TUI 偏好存储、不解析 experimental，写错文件开关不生效
 - 入口：`mycode-v2.bat`（勿直接跑 exe——模型禁拉、段错误重试、stderr 捕获都在 wrapper 里）
 - 点击弹窗聚焦依赖 `mycode://` 协议 + `~/.cache/mycode/notify/` 产物——首次弹窗自动生成/注册，无需配置
 - **共享目录说明**：v1（源码模式，DB=`mycode-local.db`）与 v2（exe，DB=`mycode.db`）共用 `~/.config|local|cache/mycode` 但数据库天然错开；**不要**让两边交换运行模式（v2 别用源码跑、v1 别编译成 latest channel），否则 DB 迁移可能互相污染

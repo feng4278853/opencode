@@ -10,9 +10,9 @@ v1（1.18.x 架构）的升级流程在 `../../opencode/docs/superpowers/update-
 |---|---|
 | 仓库 | `F:\Git\my-open-code\opencode-v2`，分支 `my-opencode-v2` |
 | remote | `origin` = feng4278853/opencode（fork）、`upstream` = anomalyco/opencode |
-| 基线 | **v2.2.5**（上游 tag `v2.2.5`，commit `9bbb8ce18c`，于 2026-11-02 完成第三次 rebase 升级；此前 2026-10-30 到 v2.2.2，2026-10-25 到 v2.0.26） |
-| 私有化提交（18 个，见 `git log --oneline v2.2.5..HEAD`） | ① 主体改造（改名/云摘除/更新禁用）② 构建验证+wrapper ③ sparkline+弹窗移植 ④⑤⑥ TUI 品牌化+sparkline 渲染修复+wordmark ⑦⑧ 升级文档+pre-push 裁剪 ⑨⑩⑪ PWA/图标/标题品牌化 ⑫ bun.exe gitignore ⑬ 文档基点 |
-| runtime | **bun 1.4.4**（v2 上游要求 1.4.x；typecheck 用 `bun check --no-script -b` 需 ≥1.4.4，勿降级） |
+| 基线 | **v2.3.0**（上游 tag `v2.3.0`，commit `a6b15d33`，于 2026-11-16 完成第四次 rebase 升级，890 个上游提交；此前 2026-11-02 到 v2.2.5、2026-10-30 到 v2.2.2、2026-10-25 到 v2.0.26） |
+| 私有化提交（21 个，见 `git log --oneline v2.3.0..HEAD`） | ① 主体改造（改名/云摘除/更新禁用）② 构建验证+wrapper ③ sparkline+弹窗移植 ④⑤⑥ TUI 品牌化+渲染修复+wordmark ⑦⑧ 升级文档+pre-push 裁剪 ⑨⑩⑪ PWA/图标/标题品牌化 ⑫ bun.exe gitignore ⑬⑭ 文档基点×2 ⑮ experimental.todo 文档 |
+| runtime | **bun 1.4.4**（v2.3.0 packageManager 锁定 bun@1.4.4；typecheck 用 `bun check --no-script -b`，勿降级） |
 
 ## ⚠️ 官方 v2 的版本渠道（2026-10-11 查证，升级前先复核）
 
@@ -204,6 +204,14 @@ rtk git grep -nE "models\.opencode\.ai|console\.opencode\.ai" -- packages/core/s
 - 入口：`mycode-v2.bat`（勿直接跑 exe——模型禁拉、段错误重试、stderr 捕获都在 wrapper 里）
 - 点击弹窗聚焦依赖 `mycode://` 协议 + `~/.cache/mycode/notify/` 产物——首次弹窗自动生成/注册，无需配置
 - **共享目录说明**：v1（源码模式，DB=`mycode-local.db`）与 v2（exe，DB=`mycode.db`）共用 `~/.config|local|cache/mycode` 但数据库天然错开；**不要**让两边交换运行模式（v2 别用源码跑、v1 别编译成 latest channel），否则 DB 迁移可能互相污染
+
+## 2026-11-16 升级到 v2.3.0 的新增经验（第四轮，890 提交大版本）
+
+1. **弱网/镜像受限时的对象补齐方法论（本次核心突破）**：partial clone 的 lazy fetch 在弱网下"用到谁拉谁"且每轮断线前功尽弃。有效打法：① `git rev-list --objects --missing=print <基线>..<目标>` 列出缺失全集；② **`xargs -P 32 -I {}` 并行 `git cat-file` 逐对象触发 lazy fetch**（每对象几 KB，延迟是唯一瓶颈，并行摊平后 ~9 个/秒，8866 个约 40 分钟收敛）；③ 镜像测速看**小文件延迟**而非带宽（curl 单发 package.json 计时，<1s 为优）。本轮实测：ghproxy.icu 延迟 0.81s 最优（gh.acmsz 22s/带宽 745KB/s 适合大流，eogh.719831 慢，down.mxw.xx.kg 一般）。备选镜像轮换配置在 `remote.mxw.url`，运行中切换即刻生效。
+2. **v2.3.0 是 890 提交大版本但冲突面温和**：1594 个改动文件里砸中私有化 delta（68 文件）的仅 7 个。教训：**评估冲突面用"上游改动 ∩ 私有化文件"，不要被总提交数吓住**；也不要因为 minor 版本号而跳过中间 tag（v2.2.7 含 v2.3.0 的 79% 变更，跳过它直上 v2.3.0 冲突面几乎相同）。
+3. **updater.ts 上游接口演进**：`latest(method?)` 加参、新增 `managed()` 方法、`release()` 依旧直连 `opencode.ai/update/api`。冲突解法不变：取上游整版 → release() 开头注入 env 守卫（`MYCODE_DISABLE_UPDATE`，保留注释说明防类型折叠）。本次 typecheck 一次过。
+4. **bun 拦截的 postinstall 复核**：`bun install --ignore-scripts` 会拦 `@ibm/plex`（ibmtelemetry，**拦得对**）、`@ast-grep/cli`（二进制已随包分发，lint 不受影响，无需 trust）、`@parcel/watcher`/`sharp`（CLI-only 构建不需要）。`bun pm untrusted` 逐个确认后保持拦截。
+5. **第三方启动的 Toast 弹窗**：上游 TUI 新增 `toast` 通知能力（`opentui-notifications`），与本方 windowsToast 并存不冲突。
 
 ## 2026-11-02 升级到 v2.2.5 的新增经验（第三轮）
 

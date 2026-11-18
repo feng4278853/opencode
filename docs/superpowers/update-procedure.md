@@ -11,7 +11,7 @@ v1（1.18.x 架构）的升级流程在 `../../opencode/docs/superpowers/update-
 | 仓库 | `F:\Git\my-open-code\opencode-v2`，分支 `my-opencode-v2` |
 | remote | `origin` = feng4278853/opencode（fork）、`upstream` = anomalyco/opencode |
 | 基线 | **v2.3.2**（上游 tag `v2.3.2`，commit `c0ad18b4`，于 2026-11-18 完成第五次 rebase 升级，193 个上游提交；此前 2026-11-16 到 v2.3.0、2026-11-02 到 v2.2.5、2026-10-30 到 v2.2.2、2026-10-25 到 v2.0.26） |
-| 私有化提交（22 个，见 `git log --oneline v2.3.2..HEAD`） | ① 主体改造（改名/云摘除/更新禁用）② 构建验证+wrapper ③ sparkline+弹窗移植 ④⑤⑥ TUI 品牌化+渲染修复+wordmark ⑦⑧ 升级文档+pre-push 裁剪 ⑨⑩⑪ PWA/图标/标题品牌化 ⑫ bun.exe gitignore ⑬⑭ 文档基点×2 ⑮ experimental.todo 文档 ⑯ check-greys 裁剪。注：升级流程中若某私有化提交在目标版本上变空会被自动 drop（内容已在 delta 中核验，无损失） |
+| 私有化提交（22 个，见 `git log --oneline v2.3.2..HEAD`） | ① 主体改造（改名/云摘除/更新禁用）② 构建验证+wrapper ③ sparkline+弹窗移植 ④⑤⑥ TUI 品牌化+渲染修复+wordmark ⑦⑧ 升级文档+pre-push 裁剪 ⑨⑩⑪ PWA/图标/标题品牌化 ⑫ bun.exe gitignore ⑬⑭ 文档基点×2 ⑮ experimental.todo 文档 ⑯ check-greys 裁剪 ⑰ Windows symlink 修复（app/custom-elements.d.ts 上游是 symlink，Windows checkout 成纯文本致 typecheck 崩，改为等价 reference 指令）⑱ 删除上游新增的依赖已删插件的测试×2（provider-opencode-artifacts/watches）。注：升级流程中若某私有化提交在目标版本上变空会被自动 drop（内容已在 delta 中核验，无损失） |
 | runtime | **bun 1.4.4**（v2.3.2 packageManager 锁定 bun@1.4.4；typecheck 用 `bun check --no-script -b`，勿降级） |
 
 ## ⚠️ 官方 v2 的版本渠道（2026-10-11 查证，升级前先复核）
@@ -207,7 +207,7 @@ rtk git grep -nE "models\.opencode\.ai|console\.opencode\.ai" -- packages/core/s
 
 ## 2026-11-18 升级到 v2.3.2 的新增经验（第五轮，193 提交小版本）
 
-流程首次全程零波折跑通：并行预拉 2539 对象 ~12 分钟收敛 → rebase 仅 5 处冲突（opencode.ts 惯例重删、package.json 取上游新版+lint 合并上游新规则）→ typecheck 一次过 → marker 21/21 → 上游新增官方域为 0。经验固化：**小版本升级直接复用第四轮的并行预拉方法论即可，无需新手段**；lint 冲突的合并原则 = 上游新增规则保留 + 我方的裁剪（check-greys）保持。
+流程基本零波折：并行预拉 2539 对象 ~12 分钟收敛 → rebase 仅 5 处冲突（opencode.ts 惯例重删、package.json 取上游新版+lint 合并上游新规则）→ marker 21/21 → 上游新增官方域为 0。新坑两个：**上游 symlink 文件在 Windows 上**（checkout 成纯文本，typecheck TS1128——修复为等价  指令）；**上游会新增依赖已删插件的测试文件**（artifacts/watches 两个，遇 modify/delete 一律重删）。经验固化：**小版本升级直接复用第四轮的并行预拉方法论即可，无需新手段**；lint 冲突的合并原则 = 上游新增规则保留 + 我方的裁剪（check-greys）保持。
 
 ## 2026-11-16 升级到 v2.3.0 的新增经验（第四轮，890 提交大版本）
 

@@ -10,8 +10,8 @@ v1（1.18.x 架构）的升级流程在 `../../opencode/docs/superpowers/update-
 |---|---|
 | 仓库 | `F:\Git\my-open-code\opencode-v2`，分支 `my-opencode-v2` |
 | remote | `origin` = feng4278853/opencode（fork）、`upstream` = anomalyco/opencode |
-| 基线 | **v2.3.2**（上游 tag `v2.3.2`，commit `c0ad18b4`，于 2026-11-18 完成第五次 rebase 升级，193 个上游提交；此前 2026-11-16 到 v2.3.0、2026-11-02 到 v2.2.5、2026-10-30 到 v2.2.2、2026-10-25 到 v2.0.26） |
-| 私有化提交（22 个，见 `git log --oneline v2.3.2..HEAD`） | ① 主体改造（改名/云摘除/更新禁用）② 构建验证+wrapper ③ sparkline+弹窗移植 ④⑤⑥ TUI 品牌化+渲染修复+wordmark ⑦⑧ 升级文档+pre-push 裁剪 ⑨⑩⑪ PWA/图标/标题品牌化 ⑫ bun.exe gitignore ⑬⑭ 文档基点×2 ⑮ experimental.todo 文档 ⑯ check-greys 裁剪 ⑰ Windows symlink 修复（app/custom-elements.d.ts 上游是 symlink，Windows checkout 成纯文本致 typecheck 崩，改为等价 reference 指令）⑱ 删除上游新增的依赖已删插件的测试×2（provider-opencode-artifacts/watches）。注：升级流程中若某私有化提交在目标版本上变空会被自动 drop（内容已在 delta 中核验，无损失） |
+| 基线 | **v2.4.1**（上游 tag `v2.4.1`，commit `6f051405`，于 2026-11-24 完成第六次 rebase 升级，354 个上游提交；此前 2026-11-18 到 v2.3.2、2026-11-16 到 v2.3.0、2026-11-02 到 v2.2.5、2026-10-30 到 v2.2.2、2026-10-25 到 v2.0.26） |
+| 私有化提交（22 个，见 `git log --oneline v2.3.2..HEAD`） | ① 主体改造（改名/云摘除/更新禁用）② 构建验证+wrapper ③ sparkline+弹窗移植 ④⑤⑥ TUI 品牌化+渲染修复+wordmark ⑦⑧ 升级文档+pre-push 裁剪 ⑨⑩⑪ PWA/图标/标题品牌化 ⑫ bun.exe gitignore ⑬⑭ 文档基点×2 ⑮ experimental.todo 文档 ⑯ check-greys 裁剪 ⑰ Windows symlink 修复（v2.4.1 起该文件 mode 已修正为 100644）（app/custom-elements.d.ts 上游是 symlink，Windows checkout 成纯文本致 typecheck 崩，改为等价 reference 指令）⑱ 删除上游新增的依赖已删插件的测试×2（provider-opencode-artifacts/watches）。注：升级流程中若某私有化提交在目标版本上变空会被自动 drop（内容已在 delta 中核验，无损失） |
 | runtime | **bun 1.4.4**（v2.3.2 packageManager 锁定 bun@1.4.4；typecheck 用 `bun check --no-script -b`，勿降级） |
 
 ## ⚠️ 官方 v2 的版本渠道（2026-10-11 查证，升级前先复核）
@@ -204,6 +204,13 @@ rtk git grep -nE "models\.opencode\.ai|console\.opencode\.ai" -- packages/core/s
 - 入口：`mycode-v2.bat`（勿直接跑 exe——模型禁拉、段错误重试、stderr 捕获都在 wrapper 里）
 - 点击弹窗聚焦依赖 `mycode://` 协议 + `~/.cache/mycode/notify/` 产物——首次弹窗自动生成/注册，无需配置
 - **共享目录说明**：v1（源码模式，DB=`mycode-local.db`）与 v2（exe，DB=`mycode.db`）共用 `~/.config|local|cache/mycode` 但数据库天然错开；**不要**让两边交换运行模式（v2 别用源码跑、v1 别编译成 latest channel），否则 DB 迁移可能互相污染
+
+## 2026-11-24 升级到 v2.4.1 的新增经验（第六轮，354 提交跨 minor）
+
+1. **主题体系改名冲突**：上游把 opencode2.json 改名为 opencode-classic.json，并新增 available() 作为 themeSources signal 的别名（两套 API 并存等价）。合并原则：上游新主题资产保留 + 我方 mycode.json 保持 `import opencode` 导出名（下游引用零改动）+ 默认主题值改为 mycode。注意去重冲突两侧的同名 import。
+2. **models-dev.ts 大改（+275 行）**：上游重构模型目录解码。defaultSource 行重新定位后植入，结构变了但 `const defaultSource = "https://models.dev"` 形态不变，marker 直接命中。
+3. **网络验证方法论修正**：GLM Flash 非流式请求仅 1-2 秒，netstat/Get-NetTCPConnection 的 ESTABLISHED 采样大概率错过短连接窗口。**权威证据改用 DNS 缓存**（Get-DnsClientCache 查 opencode/opncd 解析为零——任何公网请求必先解析域名，TTL 数分钟），连接采样降级为辅助手段。
+4. **上游 run 的 --model flag 位置**：v2.4.1 中 `--model` 是 run 子命令参数（`mycode run --model "provider/model" "..."`），放全局位置会报 Unrecognized flag。
 
 ## 2026-11-18 升级到 v2.3.2 的新增经验（第五轮，193 提交小版本）
 
